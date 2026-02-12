@@ -3514,5 +3514,1609 @@
     ],
     "explanation": "Web API tests extend special base classes for REST/SOAP testing.\n\nWhy B is correct:\n- WebapiAbstract: Base class for API tests\n- _webApiCall(): Makes authenticated API requests\n- Supports REST and SOAP\n- Fixtures for test data setup\n- Runs against real Magento instance\n\nWhy others are incorrect:\n- A: PHP-based, not JavaScript\n- C: Automated testing supported\n- D: REST/SOAP, not just GraphQL",
     "codeExample": "// Web API Functional Test\nnamespace Vendor\\Module\\Test\\Api;\n\nuse Magento\\TestFramework\\TestCase\\WebapiAbstract;\n\nclass ProductApiTest extends WebapiAbstract\n{\n    const RESOURCE_PATH = '/V1/products';\n\n    /**\n     * @magentoApiDataFixture Magento/Catalog/_files/product_simple.php\n     */\n    public function testGetProduct(): void\n    {\n        $sku = 'simple';\n\n        $serviceInfo = [\n            'rest' => [\n                'resourcePath' => self::RESOURCE_PATH . '/' . $sku,\n                'httpMethod' => \\Magento\\Framework\\Webapi\\Rest\\Request::HTTP_METHOD_GET,\n            ],\n            'soap' => [\n                'service' => 'catalogProductRepositoryV1',\n                'operation' => 'catalogProductRepositoryV1Get',\n            ],\n        ];\n\n        $response = $this->_webApiCall($serviceInfo);\n\n        $this->assertEquals($sku, $response['sku']);\n        $this->assertEquals('Simple Product', $response['name']);\n    }\n\n    public function testCreateProduct(): void\n    {\n        $productData = [\n            'product' => [\n                'sku' => 'test-api-product',\n                'name' => 'Test API Product',\n                'price' => 99.99,\n                'status' => 1,\n                'type_id' => 'simple',\n                'attribute_set_id' => 4,\n            ]\n        ];\n\n        $serviceInfo = [\n            'rest' => [\n                'resourcePath' => self::RESOURCE_PATH,\n                'httpMethod' => \\Magento\\Framework\\Webapi\\Rest\\Request::HTTP_METHOD_POST,\n            ],\n        ];\n\n        $response = $this->_webApiCall($serviceInfo, $productData);\n\n        $this->assertArrayHasKey('id', $response);\n    }\n}\n\n// Run: vendor/bin/phpunit -c dev/tests/api-functional/phpunit.xml.dist\n// Requires: TESTS_BASE_URL, TESTS_WEBSERVICE_USER, TESTS_WEBSERVICE_APIKEY"
+  },
+  {
+    "id": 122,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Medium",
+    "question": "During a code audit, you find a custom module that directly instantiates objects using `new` keyword inside a controller action instead of using dependency injection. Which refactoring approach is most appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Replace all `new` instantiations with ObjectManager::getInstance()->create()"
+      },
+      {
+        "id": "B",
+        "text": "Inject dependencies through the constructor and declare them in di.xml if custom preferences are needed"
+      },
+      {
+        "id": "C",
+        "text": "Create a Factory class manually for each object and use those factories in the controller"
+      },
+      {
+        "id": "D",
+        "text": "Move the instantiation logic to a Helper class and inject only the Helper"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: Constructor injection is the standard Magento 2 DI pattern. The framework's compiled DI container handles object creation, lifecycle, and substitution. Declaring constructor dependencies makes the class testable and allows overriding via di.xml.\n\nA is wrong: Using ObjectManager directly is explicitly discouraged by Magento coding standards. It hides dependencies, makes the class untestable, and bypasses the compiled DI container's optimizations.\n\nC is wrong: While factories are valid for objects that need multiple instances at runtime, you should not manually create factory classes. Magento auto-generates factories. For most service-layer dependencies, direct injection is preferred over factories.\n\nD is wrong: Moving instantiation into a Helper class simply relocates the anti-pattern rather than fixing it. Helpers that act as service locators violate the Single Responsibility Principle and obscure the real dependency graph.",
+    "codeExample": "// BEFORE (anti-pattern):\nclass SaveController extends Action\n{\n    public function execute()\n    {\n        $validator = new \\Vendor\\Module\\Model\\Validator();\n        $processor = new \\Vendor\\Module\\Model\\Processor();\n        // ...\n    }\n}\n\n// AFTER (correct DI):\nclass SaveController extends Action\n{\n    public function __construct(\n        Context $context,\n        private readonly Validator $validator,\n        private readonly Processor $processor\n    ) {\n        parent::__construct($context);\n    }\n\n    public function execute()\n    {\n        $this->validator->validate($data);\n        $this->processor->process($data);\n    }\n}"
+  },
+  {
+    "id": 123,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Hard",
+    "question": "You are reviewing a module that uses a `preference` in di.xml to completely replace the core `Magento\\Catalog\\Model\\Product` class with a custom implementation that adds three new methods. What is the primary architectural concern, and what is the recommended refactoring strategy?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Preferences on models are fine since they are the standard extension mechanism; no refactoring needed"
+      },
+      {
+        "id": "B",
+        "text": "Replace the preference with an around plugin on each method that needs modification, keeping the core class intact"
+      },
+      {
+        "id": "C",
+        "text": "Replace the preference with an observer on relevant events, and extract the new methods into a separate service class that operates on product data"
+      },
+      {
+        "id": "D",
+        "text": "Replace the preference with a composition-based approach: create extension attributes for additional data and a dedicated service class for the new business logic"
+      },
+      {
+        "id": "E",
+        "text": "Keep the preference but extend it from the core class to preserve backward compatibility"
+      }
+    ],
+    "correctAnswers": [
+      "D"
+    ],
+    "explanation": "D is correct: Composition over inheritance is the preferred approach. Extension attributes provide a framework-supported mechanism to add data to existing entities without modifying their class hierarchy. A dedicated service class for business logic follows the Single Responsibility Principle and avoids conflicts with other modules that may also need to extend the Product model.\n\nA is wrong: Preferences on core entity models like Product are highly problematic because only one preference can win at runtime. If another module also declares a preference for the same class, one will silently override the other, causing unpredictable behavior.\n\nB is wrong: While plugins avoid the single-preference conflict, using around plugins on a model class to add entirely new methods is not possible — plugins can only intercept existing public methods. They cannot add new public API surface to a class.\n\nC is wrong: Observers only fire on dispatched events, so they cannot intercept arbitrary method calls. Extracting to a service class is good advice, but relying solely on observers limits when that logic can execute. Observers also cannot return values or modify method output.\n\nE is wrong: Extending from the core class does not solve the fundamental problem — only one preference wins. If two modules both set preferences that extend the core Product class, one module's functionality is lost entirely.",
+    "codeExample": "// BEFORE (anti-pattern): preference replaces Product entirely\n// di.xml: <preference for=\"Magento\\Catalog\\Model\\Product\" type=\"Vendor\\Module\\Model\\CustomProduct\" />\n\n// AFTER (composition approach):\n// 1. extension_attributes.xml:\n// <extension_attributes for=\"Magento\\Catalog\\Api\\Data\\ProductInterface\">\n//     <attribute code=\"custom_warranty\" type=\"Vendor\\Module\\Api\\Data\\WarrantyInterface\" />\n// </extension_attributes>\n\n// 2. Dedicated service class:\nclass ProductWarrantyService\n{\n    public function __construct(\n        private readonly WarrantyRepositoryInterface $warrantyRepository\n    ) {}\n\n    public function getWarrantyForProduct(ProductInterface $product): ?WarrantyInterface\n    {\n        return $this->warrantyRepository->getByProductId((int) $product->getId());\n    }\n}"
+  },
+  {
+    "id": 124,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Medium",
+    "question": "Your team runs PHPStan at level 6 on a Magento 2 project. A developer proposes increasing to level 8. Which statement best describes the architectural impact of this decision?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Level 8 adds strict property type checking and enforces return type declarations, which will likely surface hundreds of errors in modules relying on magic getters/setters in AbstractModel subclasses"
+      },
+      {
+        "id": "B",
+        "text": "Level 8 only adds stricter null-checking rules and has minimal impact on Magento code because Magento already handles null types properly"
+      },
+      {
+        "id": "C",
+        "text": "Level 8 is identical to level 6 but enables parallel execution, so the only impact is faster CI pipeline runs"
+      },
+      {
+        "id": "D",
+        "text": "Level 8 requires PHP 8.2+ and cannot be used with Magento 2.4.x which supports PHP 8.1"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct: PHPStan level 8 enforces strict type rules including method return types and property types. Magento's AbstractModel relies heavily on magic __get/__set methods and getData()/setData() patterns that lack proper type declarations. Moving to level 8 will flag these as errors because PHPStan cannot infer types from magic methods without a custom extension or phpDoc annotations, generating a large volume of new findings.\n\nB is wrong: Level 8 goes well beyond null-checking. It enforces strict rules on method calls, property access, and type juggling. Magento code frequently uses loose typing patterns that level 8 catches. The claim that Magento handles null types properly is also incorrect — many core methods have incomplete type annotations.\n\nC is wrong: PHPStan levels are strictly about analysis strictness, not execution performance. Each level adds new categories of checks. Parallel execution is a separate configuration option available at any level.\n\nD is wrong: PHPStan levels are not tied to PHP versions. PHPStan supports analysis at any level regardless of the PHP runtime version. The tool's configuration is independent of the PHP version the project targets.",
+    "codeExample": "// Common PHPStan level 8 errors in Magento code:\n\n// Error: Method getData() returns mixed, used as string\n$name = $product->getData('name');\nstrlower($name); // PHPStan level 8: Parameter #1 expects string, mixed given\n\n// Error: Magic method call not recognized\n$product->getCustomAttribute(); // Method getCustomAttribute() not found\n\n// Fix: Add phpDoc or use typed getters\n/** @var string $name */\n$name = $product->getData('name');\n// Or better: $name = (string) $product->getName();"
+  },
+  {
+    "id": 125,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Hard",
+    "question": "During a code review, you identify a service class with a cyclomatic complexity of 47 in its main method. The method handles order processing with branching logic for different payment methods, shipping carriers, and customer groups. Which refactoring strategy best reduces complexity while maintaining the open/closed principle?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Split the method into smaller private methods within the same class, one per logical branch"
+      },
+      {
+        "id": "B",
+        "text": "Use the Strategy pattern with a pool of handler classes injected via di.xml, each responsible for one payment/shipping/customer combination"
+      },
+      {
+        "id": "C",
+        "text": "Replace conditional logic with a Chain of Responsibility pattern where each handler decides if it can process the order and delegates otherwise"
+      },
+      {
+        "id": "D",
+        "text": "Create a single abstract base handler class and extend it for each variation, using a Factory to select the correct subclass"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct: Chain of Responsibility is ideal here because order processing involves multiple independent concerns (payment, shipping, customer group) that should be evaluated in sequence. Each handler encapsulates one decision domain, can be added/removed via di.xml without modifying existing handlers (open/closed principle), and the chain naturally reduces cyclomatic complexity by distributing branching across focused classes. Magento itself uses this pattern in its validation and processing pipelines.\n\nA is wrong: Extracting to private methods reduces the visual complexity of the main method but does not reduce the actual cyclomatic complexity of the class. The class still contains all the branching logic, cannot be extended without modification, and becomes harder to test because private methods cannot be tested in isolation.\n\nB is wrong: A strategy pool works when you need to select exactly one strategy based on a single discriminator. Order processing with payment × shipping × customer group combinations creates a combinatorial explosion of strategy classes. The pool approach forces you to create a handler for every possible combination rather than composing independent concerns.\n\nD is wrong: A class hierarchy with a factory couples the selection logic to a factory class that must be modified whenever a new variation is added, violating the open/closed principle. Deep inheritance hierarchies also make it difficult to compose behaviors across multiple concerns (payment AND shipping AND customer group).",
+    "codeExample": "// Chain of Responsibility via di.xml:\n// <type name=\"Vendor\\Module\\Model\\OrderProcessorChain\">\n//     <arguments>\n//         <argument name=\"processors\" xsi:type=\"array\">\n//             <item name=\"payment\" xsi:type=\"object\">Vendor\\Module\\Model\\Processor\\PaymentProcessor</item>\n//             <item name=\"shipping\" xsi:type=\"object\">Vendor\\Module\\Model\\Processor\\ShippingProcessor</item>\n//             <item name=\"customer\" xsi:type=\"object\">Vendor\\Module\\Model\\Processor\\CustomerGroupProcessor</item>\n//         </argument>\n//     </arguments>\n// </type>\n\nclass OrderProcessorChain implements OrderProcessorInterface\n{\n    public function __construct(\n        private readonly array $processors\n    ) {}\n\n    public function process(OrderInterface $order): OrderInterface\n    {\n        foreach ($this->processors as $processor) {\n            $order = $processor->process($order);\n        }\n        return $order;\n    }\n}"
+  },
+  {
+    "id": 126,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Hard",
+    "question": "You discover a circular dependency: Module A's service injects Module B's repository, and Module B's plugin injects Module A's service. The application crashes with a circular dependency error during compilation. Which approach correctly resolves this while preserving functionality?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use Proxy classes for one of the dependencies so it is lazy-loaded, breaking the circular instantiation chain"
+      },
+      {
+        "id": "B",
+        "text": "Merge both modules into a single module to eliminate the cross-module dependency entirely"
+      },
+      {
+        "id": "C",
+        "text": "Extract the shared contract into a third module containing only interfaces, and have both modules depend on that contract module instead of each other"
+      },
+      {
+        "id": "D",
+        "text": "Replace constructor injection with ObjectManager::getInstance() calls in one of the modules to bypass the DI container's cycle detection"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct: Extracting shared interfaces into a separate contract module (following Magento's own *Api pattern, e.g., Magento_CatalogApi) applies the Dependency Inversion Principle. Both modules depend on abstractions in the contract module rather than on each other's concrete implementations. This breaks the circular dependency at the architectural level, not just at the instantiation level, and allows either module to be replaced independently.\n\nA is wrong: Proxy classes are a valid tactical fix that breaks the instantiation cycle by deferring object creation. However, they mask the underlying architectural problem — the modules are still tightly coupled. The circular dependency remains in the module dependency graph (module.xml sequence declarations), which causes issues with module ordering, upgrades, and independent deployability. Proxies should be a temporary measure, not a permanent solution.\n\nB is wrong: Merging modules defeats the purpose of modular architecture. It increases the blast radius of changes, makes independent testing harder, and creates a monolithic module that violates the Single Responsibility Principle. This approach moves in the opposite direction of good architecture.\n\nD is wrong: Using ObjectManager directly is the worst option. It hides the dependency entirely from the DI container, making the code untestable, uncompilable by Magento's DI compilation step, and invisible in dependency analysis tools. It also violates Magento's coding standards.",
+    "codeExample": "// BEFORE: Circular dependency\n// Module A: ServiceA injects RepositoryB\n// Module B: PluginOnX injects ServiceA\n\n// AFTER: Contract module breaks the cycle\n// Module_Contract (new):\nnamespace Vendor\\Contract\\Api;\n\ninterface ServiceAInterface {\n    public function execute(int $entityId): ResultInterface;\n}\n\ninterface RepositoryBInterface {\n    public function getById(int $id): EntityBInterface;\n}\n\n// Module A depends on Contract (not B):\n// Module A implements ServiceAInterface\n// Module A injects RepositoryBInterface\n\n// Module B depends on Contract (not A):\n// Module B implements RepositoryBInterface\n// Module B's plugin injects ServiceAInterface"
+  },
+  {
+    "id": 127,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Medium",
+    "question": "Which of the following items should be flagged during an Adobe Commerce code review? (Select TWO)",
+    "options": [
+      {
+        "id": "A",
+        "text": "A plugin's before method modifies a parameter passed by reference and returns null"
+      },
+      {
+        "id": "B",
+        "text": "An observer class implements \\Magento\\Framework\\Event\\ObserverInterface and has a single execute() method with no constructor dependencies"
+      },
+      {
+        "id": "C",
+        "text": "A repository class catches all exceptions and returns an empty collection instead of propagating the error"
+      },
+      {
+        "id": "D",
+        "text": "A ViewModel implements \\Magento\\Framework\\View\\Element\\Block\\ArgumentInterface and injects a repository to provide data to a template"
+      },
+      {
+        "id": "E",
+        "text": "A custom REST API endpoint returns a response object implementing \\Magento\\Framework\\Api\\ExtensibleDataInterface"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "C"
+    ],
+    "explanation": "A should be flagged: In a before plugin, the method must return an array of the modified arguments (or null to keep originals unchanged). If the plugin modifies a parameter and returns null, the modification may not propagate correctly depending on the parameter type. This is a subtle bug that passes basic testing but fails unpredictably. The correct pattern is to return the modified arguments as an array.\n\nC should be flagged: Catching all exceptions and returning an empty collection silently swallows errors. This masks bugs like database connection failures, invalid queries, or data corruption. The caller has no way to distinguish between \"no results found\" and \"a fatal error occurred.\" Repository methods should let exceptions propagate or throw specific domain exceptions.\n\nB is not a problem: An observer with no constructor dependencies is perfectly valid for lightweight event handling. Not every class needs injected dependencies — some observers only need the data from the event object passed to execute().\n\nD is not a problem: This is the correct pattern for providing data to templates in Magento 2. ViewModels replaced the older Block-based approach and should inject repositories or services to supply data to .phtml templates.\n\nE is not a problem: Implementing ExtensibleDataInterface for REST API response objects is the standard Magento pattern that enables extension attributes and proper serialization by the web API framework.",
+    "codeExample": "// Flag A — buggy before plugin:\npublic function beforeSave(\n    \\Magento\\Catalog\\Api\\ProductRepositoryInterface $subject,\n    \\Magento\\Catalog\\Api\\Data\\ProductInterface $product\n) {\n    $product->setCustomAttribute('processed', true); // modifying param\n    return null; // BUG: should return [$product] to propagate change\n}\n\n// Flag C — silent error swallowing:\npublic function getList(SearchCriteriaInterface $criteria): ProductSearchResultsInterface\n{\n    try {\n        return $this->productRepository->getList($criteria);\n    } catch (\\Exception $e) {\n        return $this->searchResultsFactory->create(); // WRONG: hides errors\n    }\n}"
+  },
+  {
+    "id": 128,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Hard",
+    "question": "A core Magento class has the `@api` annotation on its public methods. A third-party module overrides one of these methods via a preference and changes its return type from `string` to `string|null`. According to Magento's backward compatibility policy and semantic versioning, what is the correct assessment?",
+    "options": [
+      {
+        "id": "A",
+        "text": "This is a backward-compatible change because it widens the return type, and callers that handle strings can also handle null safely in PHP 8"
+      },
+      {
+        "id": "B",
+        "text": "This is a backward-incompatible change because @api methods are part of the public contract; changing the return type requires a major version increment and will break callers that do not perform null checks"
+      },
+      {
+        "id": "C",
+        "text": "This change is acceptable for a minor version because the @api annotation only prevents removal of methods, not changes to their signatures"
+      },
+      {
+        "id": "D",
+        "text": "The @api annotation is purely informational and has no impact on backward compatibility or semantic versioning decisions"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: Methods annotated with @api are Magento's guaranteed public contract. Under Magento's semantic versioning policy (which follows semver 2.0), any change to the signature of an @api method — including widening a return type — constitutes a backward-incompatible change. Existing callers rely on the method always returning a string and may call string methods on the result without null checks. Returning null would cause TypeError or fatal errors in those callers. Such changes require a major version bump.\n\nA is wrong: While PHP 8's type system allows union types, widening a return type is a breaking change from the caller's perspective. Code written against the original contract `string` legitimately calls string methods (strlen, substr, etc.) on the return value. Introducing null as a possible return value breaks all callers that do not have null guards. Backward compatibility is about the contract, not what PHP technically allows.\n\nC is wrong: The @api annotation protects the entire method signature, not just its existence. Magento's backward compatibility policy explicitly states that @api methods cannot have their parameters, return types, or behavior changed in minor or patch versions. Only additions (new optional parameters with defaults) are permitted.\n\nD is wrong: The @api annotation has concrete implications in Magento's development process. Magento's automated backward compatibility checker (static test suite) specifically scans for @api annotation changes. Modules that depend on @api interfaces are guaranteed stability across minor versions.",
+    "codeExample": "// Core class with @api contract:\nnamespace Magento\\Catalog\\Model;\n\nclass Product\n{\n    /**\n     * @api\n     * @return string\n     */\n    public function getSku(): string\n    {\n        return (string) $this->getData('sku');\n    }\n}\n\n// BREAKING CHANGE — third-party preference:\nclass CustomProduct extends Product\n{\n    public function getSku(): string|null  // BC BREAK!\n    {\n        $sku = $this->getData('sku');\n        return $sku ?: null;\n    }\n}\n\n// Existing caller that will break:\n$sku = $product->getSku();\n$normalized = strtolower($sku); // TypeError if null"
+  },
+  {
+    "id": 129,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Medium",
+    "question": "You are assessing technical debt in a Magento 2 project. The codebase has: (1) 15 classes using ObjectManager directly, (2) 8 controllers with 400+ line execute() methods, (3) 3 modules missing composer.json dependency declarations, (4) 45 deprecated method calls flagged by PHPStan. Which items should be prioritized first for refactoring?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Deprecated method calls first, because they will cause fatal errors on the next Magento upgrade"
+      },
+      {
+        "id": "B",
+        "text": "ObjectManager usage first, because it causes immediate runtime failures in production"
+      },
+      {
+        "id": "C",
+        "text": "Missing composer.json declarations first, because they prevent reliable deployment and can cause silent failures when modules are installed in different orders"
+      },
+      {
+        "id": "D",
+        "text": "Large controllers first, because high complexity is the leading cause of production bugs and makes all other refactoring harder"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct: Missing composer.json dependency declarations are the highest priority because they create deployment-time risks that are difficult to diagnose. If module installation order changes or a dependency is not present, the application may fail to compile or may produce runtime errors that appear unrelated to the actual cause. This affects the reliability of CI/CD pipelines, cloud deployments, and environment provisioning. It is also the fastest fix with the highest risk-reduction ratio.\n\nA is wrong: Deprecated method calls are important but not the highest priority. Deprecated methods continue to function in the current version — they only become breaking changes on major version upgrades. You have time to address these before upgrading. PHPStan can continuously track them so none are missed.\n\nB is wrong: ObjectManager usage does not cause immediate runtime failures. The code works; it is just poorly structured. ObjectManager calls bypass DI compilation optimizations and make testing difficult, but they are a code quality issue, not a stability issue. They should be refactored but are not urgent.\n\nD is wrong: Large controllers are a maintainability concern, not an immediate risk. They make the code harder to understand and modify, but they do not cause failures. Refactoring them is valuable but should come after addressing issues that affect deployment reliability and application stability.",
+    "codeExample": ""
+  },
+  {
+    "id": 130,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Hard",
+    "question": "You review a module where a single class implements OrderManagementInterface, handles CSV export, sends email notifications, writes to a custom log, and updates inventory. This class has 12 constructor dependencies. Which SOLID principle violations are present, and what is the correct refactoring approach? (Select TWO)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Single Responsibility Principle: Extract CSV export, email notification, logging, and inventory update into separate service classes, coordinated by a lightweight orchestrator"
+      },
+      {
+        "id": "B",
+        "text": "Liskov Substitution Principle: The class cannot be substituted for OrderManagementInterface because it has side effects not defined in the interface contract"
+      },
+      {
+        "id": "C",
+        "text": "Interface Segregation Principle: The class likely forces callers to depend on methods they don't use; split the interface into focused contracts like ExportServiceInterface, NotificationServiceInterface"
+      },
+      {
+        "id": "D",
+        "text": "Open/Closed Principle: The class cannot be extended without modification because all logic is in a single method"
+      },
+      {
+        "id": "E",
+        "text": "Dependency Inversion Principle: The 12 constructor dependencies prove the class depends on too many concrete implementations"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "C"
+    ],
+    "explanation": "A is correct (SRP violation): A class responsible for order management, CSV export, email notifications, logging, and inventory updates has at least five distinct responsibilities. Each should be a separate service class with its own single purpose. An orchestrator (or chain/pipeline) should coordinate them. This reduces each class to 2-3 dependencies and makes each independently testable.\n\nC is correct (ISP violation): When a class handles five different concerns behind a single interface, callers that only need CSV export are forced to depend on the entire class including email, logging, and inventory logic. Splitting into focused interfaces (ExportServiceInterface, NotificationServiceInterface, etc.) allows callers to depend only on what they actually use.\n\nB is wrong: LSP is about behavioral substitutability — a subclass must honor the superclass's contract. The issue described here is not about substitution but about a class doing too much. Side effects like logging and notifications are implementation details, not LSP violations, as long as the method fulfills its documented contract.\n\nD is wrong: While OCP may also be a concern, the primary issue is not extensibility. The problem is not that you cannot extend the class but that the class itself conflates unrelated concerns. OCP becomes relevant after SRP is addressed.\n\nE is wrong: Having many constructor dependencies is a symptom of SRP violation, not a DIP violation. DIP is about depending on abstractions rather than concretions. If the 12 dependencies are all interfaces (which is standard in Magento DI), DIP is actually being followed. The real problem is that no single class should need 12 dependencies.",
+    "codeExample": "// BEFORE: God class violating SRP and ISP\nclass OrderProcessor implements OrderManagementInterface\n{\n    public function __construct(\n        private OrderRepository $orderRepo,\n        private CsvWriter $csvWriter,\n        private TransportBuilder $emailTransport,\n        private LoggerInterface $logger,\n        private StockRegistryInterface $stockRegistry,\n        // ... 7 more dependencies\n    ) {}\n\n    public function process(OrderInterface $order): void\n    {\n        // 300 lines handling ALL concerns\n    }\n}\n\n// AFTER: Focused classes coordinated by orchestrator\nclass OrderProcessorOrchestrator\n{\n    public function __construct(\n        private OrderPersistenceService $persistence,\n        private OrderExportService $export,\n        private OrderNotificationService $notification,\n        private InventoryUpdateService $inventory\n    ) {}\n\n    public function process(OrderInterface $order): void\n    {\n        $this->persistence->save($order);\n        $this->inventory->adjust($order);\n        $this->notification->send($order);\n        $this->export->queue($order);\n    }\n}"
+  },
+  {
+    "id": 131,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Hard",
+    "question": "A Magento 2 project enforces Magento Coding Standards (MEQP2) and PSR-12 in its CI pipeline. A developer submits a PR that introduces an around plugin on a public method of a class that is NOT marked with `@api`. The plugin modifies both input parameters and the return value. What are the valid review concerns? (Select TWO)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Around plugins on non-@api methods are risky because the method signature may change without notice in minor/patch Magento releases, breaking the plugin silently"
+      },
+      {
+        "id": "B",
+        "text": "Around plugins violate PSR-12 because they introduce implicit control flow that is not visible in the class being modified"
+      },
+      {
+        "id": "C",
+        "text": "Around plugins that modify both input and output increase debugging complexity significantly; the review should verify that a before + after plugin combination cannot achieve the same result with less risk"
+      },
+      {
+        "id": "D",
+        "text": "Around plugins cannot be used on non-@api methods due to Magento's DI compilation rejecting them"
+      },
+      {
+        "id": "E",
+        "text": "Around plugins on non-@api methods should use type-safe parameter checking via PHP 8 named arguments to ensure forward compatibility"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "C"
+    ],
+    "explanation": "A is a valid concern: Non-@api methods have no backward compatibility guarantee. Magento may rename, remove, or change the signature of such methods in any release (minor or patch). An around plugin tightly couples to the method's exact signature — if a parameter is added, removed, or retyped, the plugin breaks silently or throws a TypeError at runtime. This is a maintenance risk that must be documented and tracked.\n\nC is a valid concern: Around plugins that modify both input and output are the most complex form of interception. They wrap the entire method call, making it difficult to debug because the stack trace shows the plugin's callable, not the original method flow. Code reviewers should verify whether a simpler before plugin (to modify input) combined with an after plugin (to modify output) achieves the same result. The before/after combination is easier to debug, composes better with other plugins, and has a clearer execution order.\n\nB is wrong: PSR-12 is a code formatting standard covering brace placement, indentation, line length, and similar style rules. It has no opinion on design patterns, architectural decisions, or plugin usage. Control flow concerns are valid but fall under Magento architecture reviews, not PSR-12 compliance.\n\nD is wrong: Magento's DI compilation does not restrict plugins to @api methods. Plugins can intercept any public method of any non-final class. The @api annotation is a documentation/contract marker, not an enforcement mechanism in the DI compiler.\n\nE is wrong: PHP 8 named arguments do not provide forward compatibility for plugins. If the method signature changes, named arguments break just as positional arguments do. Named arguments also interact poorly with Magento's plugin interception layer, which passes arguments positionally.",
+    "codeExample": "// Non-@api method being intercepted (risky):\n// Note: no @api annotation — no BC guarantee\npublic function calculateDiscount(CartInterface $cart, float $baseAmount): float\n\n// Around plugin — high complexity:\npublic function aroundCalculateDiscount(\n    OriginalClass $subject,\n    callable $proceed,\n    CartInterface $cart,\n    float $baseAmount\n): float {\n    $modifiedAmount = $baseAmount * 1.1; // modifying input\n    $result = $proceed($cart, $modifiedAmount);\n    return $result + $this->getAdditionalDiscount($cart); // modifying output\n}\n\n// Preferred: before + after (less risk, easier debugging):\npublic function beforeCalculateDiscount(\n    OriginalClass $subject,\n    CartInterface $cart,\n    float $baseAmount\n): array {\n    return [$cart, $baseAmount * 1.1];\n}\n\npublic function afterCalculateDiscount(\n    OriginalClass $subject,\n    float $result\n): float {\n    return $result + $this->getAdditionalDiscount();\n}"
+  },
+  {
+    "id": 132,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Medium",
+    "question": "A production Magento 2 store intermittently returns 503 errors during peak traffic. The server logs show no PHP fatal errors, and the application log has no exceptions. Nginx error logs show 'upstream timed out (110: Connection timed out) while reading response header from upstream'. What is the most effective first step to identify the root cause?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Increase the nginx proxy_read_timeout to 300 seconds to prevent the timeout"
+      },
+      {
+        "id": "B",
+        "text": "Enable the Magento profiler and analyze the slow requests to identify which controller actions are consuming excessive time"
+      },
+      {
+        "id": "C",
+        "text": "Check php-fpm status page and slow log to identify which PHP processes are blocked and what they are executing"
+      },
+      {
+        "id": "D",
+        "text": "Scale the infrastructure by adding more web nodes behind the load balancer"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct because the nginx 'upstream timed out' error means php-fpm workers are not responding within the timeout period. The php-fpm slow log (configured via request_slowlog_timeout) will capture stack traces of long-running PHP processes, revealing exactly what code path is blocking — whether it's a slow database query, external API call, or lock contention. The php-fpm status page shows how many workers are active vs idle, confirming if worker pool exhaustion is occurring. A is wrong because increasing the timeout only masks the symptom — requests are still slow, users still wait, and worker pool exhaustion continues. B is wrong because the Magento profiler adds overhead and is not suitable for production debugging; it also won't capture what's happening in requests that are already stuck. D is wrong because adding nodes without understanding the bottleneck may not help — if requests are blocked on a shared resource like the database or Redis, more nodes will increase contention.",
+    "codeExample": "; php-fpm pool configuration for slow log diagnosis\n; /etc/php-fpm.d/www.conf\nrequest_slowlog_timeout = 5s\nslowlog = /var/log/php-fpm/www-slow.log\n\n; Example slow log output showing the blocking call:\n[pool www] pid 12345\nscript_filename = /var/www/magento/pub/index.php\n[0x00007f8a1c0] sleep() /var/www/magento/vendor/magento/module-catalog/Model/ResourceModel/Product/Collection.php:487\n[0x00007f8a1c1] load() /var/www/magento/vendor/magento/framework/Data/Collection/AbstractDb.php:640\n[0x00007f8a1c2] _loadEntities() /var/www/magento/vendor/magento/module-catalog/Model/ResourceModel/Product/Collection.php:512"
+  },
+  {
+    "id": 133,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Hard",
+    "question": "A Magento 2 store's catalog pages have gradually degraded from 800ms to 4+ seconds over several months. Full page cache hit rates remain above 95%. The New Relic APM transaction trace for a cache-miss catalog page shows: Database 45%, PHP 40%, External 10%, Redis 5%. The top database call is a SELECT on catalog_product_entity with 23 JOINs taking 1.8 seconds. Which combination of actions would an architect recommend to systematically resolve this?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Enable MySQL query cache and add composite indexes covering the most frequent WHERE clause combinations"
+      },
+      {
+        "id": "B",
+        "text": "Analyze the EAV attribute configuration to remove unused attributes from flat tables, review third-party modules adding unnecessary JOINs via plugins on the collection, and verify Elasticsearch is handling filterable attributes instead of MySQL"
+      },
+      {
+        "id": "C",
+        "text": "Increase PHP memory_limit and opcache size since the 40% PHP time indicates memory pressure causing garbage collection pauses"
+      },
+      {
+        "id": "D",
+        "text": "Switch from MySQL to MariaDB for better query optimizer performance and enable the Aria storage engine for temporary tables"
+      },
+      {
+        "id": "E",
+        "text": "Replace the entire catalog with a headless frontend making direct Elasticsearch queries to bypass the ORM overhead"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because the 23-JOIN query is the hallmark of EAV attribute sprawl — every product attribute added to flat tables or collection selects adds another JOIN. The systematic approach is: (1) audit catalog_eav_attribute to find attributes with is_used_in_grid, used_in_product_listing, or is_filterable that don't need to be, reducing JOINs; (2) check for third-party modules that hook into product collection load via plugins on beforeLoad/afterLoad or around plugins on addFieldToFilter, adding unnecessary JOINs — this is the most common cause of gradual degradation as modules are installed over months; (3) verify that layered navigation filters are hitting Elasticsearch rather than falling back to MySQL queries, since misconfigured search engines cause expensive aggregation queries. A is wrong because MySQL query cache was removed in MySQL 8.0 and was deprecated even in 5.7; adding indexes without reducing the number of JOINs provides minimal improvement when the fundamental problem is too many table joins. C is wrong because 40% PHP time is relative to the total transaction — reducing database time would shift the ratio, and PHP memory_limit doesn't cause GC pauses in typical request flows. D is wrong because the query optimizer difference between MySQL and MariaDB won't fix a fundamentally over-joined query design. E is wrong because it's a massive architectural overhaul that doesn't address the root cause — the EAV query would still be slow for any consumer of the data.",
+    "codeExample": "-- Diagnostic query: Find attributes adding unnecessary JOINs\nSELECT ea.attribute_code, ea.backend_type, cea.is_filterable,\n       cea.used_in_product_listing, cea.is_used_for_sort_by\nFROM eav_attribute ea\nJOIN catalog_eav_attribute cea ON ea.attribute_id = cea.attribute_id\nWHERE ea.entity_type_id = 4\n  AND (cea.used_in_product_listing = 1 OR cea.is_filterable = 1)\nORDER BY ea.attribute_code;\n\n-- Check for plugin interference on collection loading\n-- grep -r 'catalog_product_collection' vendor/thirdparty/*/etc/di.xml\n-- Look for: <type name=\"Magento\\Catalog\\Model\\ResourceModel\\Product\\Collection\">"
+  },
+  {
+    "id": 134,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Hard",
+    "question": "A Magento 2 application's memory usage climbs steadily during cron execution, eventually reaching the 2GB PHP memory limit and crashing after processing approximately 15,000 of 50,000 products in a custom mass-update script. The script uses a product collection iterator. What is the most likely root cause and correct fix?",
+    "options": [
+      {
+        "id": "A",
+        "text": "PHP's garbage collector is not running; add gc_collect_cycles() calls after each batch to force memory reclamation"
+      },
+      {
+        "id": "B",
+        "text": "The ObjectManager singleton instances and the EAV model's identity map retain references to every loaded entity; use collection pagination with clear() and implement the iterator pattern via Magento\\Framework\\Model\\ResourceModel\\Iterator"
+      },
+      {
+        "id": "C",
+        "text": "Increase the PHP memory_limit to 4GB since 50,000 products require proportionally more memory"
+      },
+      {
+        "id": "D",
+        "text": "The MySQL result set is being buffered entirely in PHP memory; switch to unbuffered queries using PDO::MYSQL_ATTR_USE_BUFFERED_QUERY = false"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because Magento 2's ORM maintains an identity map in the EAV resource model and the ObjectManager retains singleton references to repositories and their internal caches. When iterating through a collection with getItems() or foreach, each loaded product entity persists in memory even after the loop moves on, because: (1) the collection's _items array holds references; (2) the entity's resource model identity map retains the entity; (3) repositories with internal caching keep references. The fix is to use Magento\\Framework\\Model\\ResourceModel\\Iterator::walk() which processes rows one at a time without hydrating the full collection, or paginate manually using setPageSize()/setCurPage() with collection->clear() between pages to release accumulated references. A is wrong because gc_collect_cycles() only handles circular references — the memory leak here is from legitimate strong references in the identity map and collection, not circular references that the GC would clean. PHP's refcount-based memory management already frees non-circular references immediately, so gc_collect_cycles won't help. C is wrong because increasing memory_limit is not a solution — it delays the crash but the linear growth means any finite limit will eventually be hit with enough products, and 4GB per cron process is wasteful. D is wrong because while MySQL buffered queries do consume memory, the dominant memory consumer here is the PHP-side entity hydration and identity map — each product with its EAV attributes, stock data, and related entities consumes far more memory than the raw database row.",
+    "codeExample": "<?php\n// PROBLEM: Memory leak - entire collection stays in memory\n$collection = $this->productCollectionFactory->create();\n$collection->addAttributeToSelect('*');\nforeach ($collection as $product) {\n    // Each product stays in memory even after iteration\n    $this->updateProduct($product);\n}\n// Memory: ~50KB per product × 50,000 = ~2.5GB\n\n// SOLUTION: Use ResourceModel Iterator\n$collection = $this->productCollectionFactory->create();\n$collection->addAttributeToSelect(['sku', 'status']); // Select only needed\n\n/** @var \\Magento\\Framework\\Model\\ResourceModel\\Iterator $iterator */\n$this->iterator->walk(\n    $collection->getSelect(),\n    [[$this, 'processRow']],\n    [],\n    $collection->getConnection()\n);\n\n// Each row is a plain array, no entity hydration, no identity map\npublic function processRow(array $args): void\n{\n    $row = $args['row'];\n    // Process using raw data, ~1KB per row\n}"
+  },
+  {
+    "id": 135,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Medium",
+    "question": "A Magento Commerce Cloud deployment fails during the deploy phase with the error: 'SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction' during setup:upgrade. The build phase completed successfully. The site was receiving live traffic during deployment. What is the root cause and appropriate resolution?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The database server's innodb_lock_wait_timeout is too low; increase it to 300 seconds in the Cloud database configuration"
+      },
+      {
+        "id": "B",
+        "text": "Active frontend requests are holding row-level locks on tables that setup:upgrade DDL operations need to modify, and the maintenance mode should be enabled before the deploy phase runs migrations"
+      },
+      {
+        "id": "C",
+        "text": "The deploy phase should be moved to the build phase by running setup:upgrade during build instead"
+      },
+      {
+        "id": "D",
+        "text": "A database backup should be taken before deployment to allow rollback, then retry the deployment during off-peak hours"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because on Magento Cloud, the deploy phase runs setup:upgrade which executes DDL statements (ALTER TABLE, CREATE TABLE) and DML statements (INSERT/UPDATE to setup_module, flag tables). When live traffic is hitting the site simultaneously, frontend requests hold InnoDB row-level locks on catalog, checkout, and customer tables. When setup:upgrade attempts to ALTER these tables, MySQL must acquire a metadata lock, which conflicts with active transactions. The lock wait timeout expires because long-running frontend transactions don't release their locks in time. The correct approach is to ensure maintenance mode or traffic routing (via .magento.env.yaml SKIP_SCD flag or ideal_state configuration) prevents frontend traffic from reaching the database during migrations. Magento Cloud's deploy hooks support enabling maintenance mode before setup:upgrade. A is wrong because increasing the timeout only delays the failure — the fundamental conflict between DDL and active DML remains, and a 300-second timeout would mean the deployment hangs for 5 minutes per conflicting table before failing. C is wrong because setup:upgrade cannot run during the build phase on Cloud since the build environment doesn't have database access — the build phase is isolated from the database for architectural safety. D is wrong because taking a backup doesn't prevent the lock conflict, and 'off-peak hours' is unreliable — even a few active sessions can cause lock conflicts with DDL operations.",
+    "codeExample": "# .magento.app.yaml - Correct deploy hook configuration\nhooks:\n    build: |\n        set -e\n        php ./vendor/bin/ece-tools run scenario/build/generate.xml\n        php ./vendor/bin/ece-tools run scenario/build/transfer.xml\n    deploy: |\n        set -e\n        # Maintenance mode enabled automatically by ece-tools\n        # before setup:upgrade runs\n        php ./vendor/bin/ece-tools run scenario/deploy.xml\n    post_deploy: |\n        set -e\n        php ./vendor/bin/ece-tools run scenario/post-deploy.xml\n\n# .magento.env.yaml - Control deploy behavior\nstage:\n  deploy:\n    ENABLE_GOOGLE_ANALYTICS: false  # Reduce traffic during deploy\n  global:\n    SCD_ON_DEMAND: true  # Defer SCD to reduce deploy time"
+  },
+  {
+    "id": 136,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Hard",
+    "question": "Multiple Magento 2 cron jobs are found stuck in 'running' status for over 24 hours. The cron_schedule table shows overlapping entries for indexer_reindex_all_invalid and catalog_product_alert. The system has 3 web nodes behind a load balancer, all configured to run cron. Investigating further, you find duplicate entries in the cron_schedule table with the same job_code and 'running' status from different server hostnames. What is the correct architectural solution?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Add file-based lock checks at the beginning of each cron job to prevent duplicate execution"
+      },
+      {
+        "id": "B",
+        "text": "Designate a single node as the cron runner by configuring cron only on one node, ensure the cron group's use_separate_process is set to 1, and configure proper schedule_lifetime_per_group settings to auto-clean stale entries"
+      },
+      {
+        "id": "C",
+        "text": "Reduce the cron frequency from every minute to every 5 minutes to give jobs more time to complete before the next trigger"
+      },
+      {
+        "id": "D",
+        "text": "Increase MySQL's max_connections and innodb_lock_wait_timeout since the overlapping crons are likely causing connection pool exhaustion"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because the root cause is a multi-node cron race condition: when all 3 web nodes run the cron scheduler, each node checks cron_schedule for pending jobs and attempts to claim them by updating the status to 'running'. Due to timing, multiple nodes can claim the same job before the status update propagates, leading to duplicate execution. The architectural solution is: (1) designate exactly one node as the cron runner — on Cloud this is done via the .magento.app.yaml crons section on a specific instance; (2) enable use_separate_process = 1 in cron group configuration so each job runs in its own PHP process, preventing one stuck job from blocking the entire cron scheduler; (3) configure schedule_lifetime (default 15 minutes) appropriately so that stale 'running' entries from crashed processes are automatically cleaned and rescheduled. A is wrong because file-based locks don't work in a multi-node environment — each node has its own filesystem, so a lock file on node 1 is invisible to nodes 2 and 3. B addresses this with the database-level scheduling that Magento already provides, but only when a single node is responsible. C is wrong because reducing frequency doesn't prevent overlap — if a job takes 10 minutes, even 5-minute intervals will overlap, and it means legitimate short jobs run less frequently than needed. D is wrong because while connection exhaustion may be a secondary symptom, the root cause is duplicate execution, not insufficient database resources.",
+    "codeExample": "-- Diagnostic: Find stuck and duplicate cron jobs\nSELECT job_code, status, COUNT(*) as instances,\n       MIN(executed_at) as earliest, MAX(executed_at) as latest\nFROM cron_schedule\nWHERE status = 'running'\nGROUP BY job_code, status\nHAVING COUNT(*) > 1\nORDER BY instances DESC;\n\n-- Clean stale running entries (manual intervention)\nUPDATE cron_schedule\nSET status = 'error', messages = 'Manually cleared: stale running entry'\nWHERE status = 'running'\n  AND executed_at < DATE_SUB(NOW(), INTERVAL 4 HOUR);\n\n-- Verify cron group configuration\n-- app/etc/env.php\n'cron' => [\n    'default' => [\n        'schedule_generate_every' => 1,\n        'schedule_ahead_for' => 20,\n        'schedule_lifetime' => 15,\n        'history_cleanup_every' => 10,\n        'history_success_lifetime' => 60,\n        'history_failure_lifetime' => 600,\n        'use_separate_process' => 1\n    ]\n]"
+  },
+  {
+    "id": 137,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Medium",
+    "question": "A Magento 2 store with Varnish full page cache reports that logged-in customers occasionally see another customer's name and mini-cart data on category pages. The issue is intermittent and affects approximately 2% of page views. Cache hit rates are normal. What is the most likely root cause?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Varnish is caching pages with Set-Cookie headers, causing session ID leakage between customers"
+      },
+      {
+        "id": "B",
+        "text": "A custom module or theme block is not properly configured as private content — it renders customer-specific data in the server response instead of loading it via the customer-data.js AJAX mechanism"
+      },
+      {
+        "id": "C",
+        "text": "The Varnish VCL is missing the X-Magento-Vary header handling, causing all logged-in users to share the same cache entry"
+      },
+      {
+        "id": "D",
+        "text": "Redis session storage is experiencing race conditions, causing session data to be swapped between concurrent requests"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because Magento 2's full page cache architecture requires that all customer-specific (private) content be loaded client-side via the sections/customer-data.js mechanism. When a block renders private data (customer name, cart contents, wishlist count) directly in the server-side HTML response, Varnish caches that rendered HTML and serves it to other users. The 2% occurrence rate correlates with cache miss frequency — when a logged-in customer triggers a cache miss, their private data gets embedded in the cached page, which is then served to subsequent visitors until TTL expiration. The fix is to ensure private content uses the section data source pattern: server returns placeholder HTML, JavaScript loads customer-specific data via GET /customer/section/load/. A is wrong because Varnish's default VCL for Magento already strips Set-Cookie on cacheable responses (via vcl_backend_response) and passes requests with cookies directly to the backend — session ID leakage through Set-Cookie would affect 100% of cached pages, not 2%. C is wrong because missing X-Magento-Vary handling would cause a different symptom — customers in different customer groups or currencies would see wrong pricing, not personal data leakage. X-Magento-Vary varies cache by customer segment, not by individual customer. D is wrong because Redis session race conditions would cause session corruption symptoms like random logouts or cart emptying, not one customer seeing another's cached page content.",
+    "codeExample": "<?php\n// PROBLEM: Private data rendered server-side (gets cached by Varnish)\n// app/code/Vendor/Module/Block/CustomerGreeting.php\nclass CustomerGreeting extends \\Magento\\Framework\\View\\Element\\Template\n{\n    public function getCustomerName(): string\n    {\n        // This renders into cached HTML!\n        return $this->customerSession->getCustomer()->getName();\n    }\n}\n\n// SOLUTION: Use customer-data.js section for private content\n// Step 1: Create section source\n// app/code/Vendor/Module/CustomerData/Greeting.php\nclass Greeting implements SectionSourceInterface\n{\n    public function getSectionData(): array\n    {\n        return ['name' => $this->customerSession->getCustomer()->getName()];\n    }\n}\n\n// Step 2: Register in sections.xml\n// <action name=\"customer/account/login\">\n//     <section name=\"vendor-greeting\"/>\n// </action>\n\n// Step 3: Block renders placeholder, JS fills it\n// <span data-bind=\"text: customer().name\"><!-- filled client-side --></span>"
+  },
+  {
+    "id": 138,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Hard",
+    "question": "A Magento 2 store experiences periodic checkout failures during flash sales. The exception log shows: 'SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction' occurring in the sales_order_grid table. The SHOW ENGINE INNODB STATUS output reveals a deadlock cycle between INSERT into sales_order and INSERT into sales_order_grid triggered by the async grid indexer. What is the correct architectural resolution?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Switch sales_order_grid to MyISAM engine since it uses table-level locking which avoids deadlocks"
+      },
+      {
+        "id": "B",
+        "text": "Disable the async grid indexer for sales order grid by setting dev/grid/async_indexing to 0 during flash sales, and implement a custom observer that inserts into the grid table within the same transaction as the order save"
+      },
+      {
+        "id": "C",
+        "text": "Add a retry mechanism with exponential backoff in the order placement code to handle the deadlock transparently, and ensure the grid async indexer uses a separate database connection with lower isolation level"
+      },
+      {
+        "id": "D",
+        "text": "Increase InnoDB's innodb_deadlock_detect timeout and set innodb_lock_wait_timeout to 120 seconds to give transactions more time to resolve naturally"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct because the deadlock is an inherent InnoDB behavior when concurrent transactions acquire locks in different orders. During order placement, Transaction A inserts into sales_order (acquiring a gap lock on the primary key), while the async grid indexer's Transaction B reads from sales_order and inserts into sales_order_grid. With high concurrency during flash sales, the lock acquisition order creates cycles. The correct architectural resolution has two parts: (1) implement retry logic with exponential backoff — InnoDB deadlocks automatically roll back one transaction (the 'victim'), and retrying after a brief delay succeeds because the conflicting transaction has completed. This is the standard pattern for handling deadlocks in high-concurrency systems. (2) Ensure the async grid indexer uses a separate connection with READ COMMITTED isolation (vs the default REPEATABLE READ) to reduce gap lock scope, minimizing deadlock probability. A is wrong because MyISAM doesn't support transactions at all — switching a critical sales table to MyISAM would cause data integrity issues during crashes and eliminate foreign key constraints. Table-level locking also creates worse concurrency problems under high load. B is wrong because disabling async indexing and inserting synchronously within the same transaction actually increases the chance of deadlocks by making the order save transaction longer and touching more tables. It also adds latency to every checkout. D is wrong because innodb_deadlock_detect controls detection, not prevention — longer timeouts just mean transactions wait longer before the deadlock is detected. The deadlock still occurs, and the victim transaction is still rolled back. Extending wait time makes the problem worse by holding locks longer.",
+    "codeExample": "<?php\n// Retry mechanism for deadlock-prone operations\nclass OrderPlacementService\n{\n    private const MAX_RETRIES = 3;\n    private const BASE_DELAY_MS = 50;\n\n    public function placeOrder(CartInterface $cart): OrderInterface\n    {\n        $attempt = 0;\n        while (true) {\n            try {\n                $attempt++;\n                return $this->orderManagement->place($cart);\n            } catch (\\Magento\\Framework\\DB\\Adapter\\DeadlockException $e) {\n                if ($attempt >= self::MAX_RETRIES) {\n                    throw $e;\n                }\n                // Exponential backoff: 50ms, 100ms, 200ms\n                usleep(self::BASE_DELAY_MS * (2 ** ($attempt - 1)) * 1000);\n                $this->logger->warning(\n                    'Deadlock on order placement, retry attempt ' . $attempt,\n                    ['cart_id' => $cart->getId()]\n                );\n            }\n        }\n    }\n}\n\n/* INNODB STATUS deadlock output pattern:\n*** (1) TRANSACTION: INSERT INTO sales_order ... \n*** (1) HOLDS THE LOCK(S): gap lock on PRIMARY\n*** (1) WAITING FOR: index record lock on sales_order_grid\n*** (2) TRANSACTION: INSERT INTO sales_order_grid ...\n*** (2) HOLDS THE LOCK(S): index record lock on sales_order_grid\n*** (2) WAITING FOR: gap lock on sales_order PRIMARY\n*/"
+  },
+  {
+    "id": 139,
+    "category": "Troubleshooting & Root Cause Analysis",
+    "difficulty": "Hard",
+    "question": "A Magento 2 store's ERP integration via REST API begins failing intermittently after a platform upgrade. The integration pushes 500 product updates per batch. Logs show a mix of HTTP 503, 504, and occasional 200 responses within the same batch. The ERP vendor reports that their retry logic (immediate retry on failure, up to 5 times) makes the situation worse during peak hours. The API response times have increased from 200ms to 2-8 seconds. Which combination of root cause analysis steps and fixes should an architect recommend?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Increase API rate limits and web server timeouts to accommodate the higher response times, and ask the ERP vendor to increase their timeout settings"
+      },
+      {
+        "id": "B",
+        "text": "Profile the upgraded product save API endpoint to identify new plugin overhead, implement async bulk API processing using Magento's bulk API with message queue, and advise the ERP vendor to implement exponential backoff with jitter instead of immediate retries"
+      },
+      {
+        "id": "C",
+        "text": "Roll back the platform upgrade since the API performance regression indicates incompatible customizations"
+      },
+      {
+        "id": "D",
+        "text": "Split the 500-product batch into smaller batches of 50 and add a 1-second delay between each batch to reduce server load"
+      },
+      {
+        "id": "E",
+        "text": "Move the ERP integration to GraphQL mutations which are more performant than REST for bulk operations"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because it addresses all three dimensions of the problem: (1) The response time increase from 200ms to 2-8s after upgrade indicates new plugin or observer overhead on the product save path — profiling with Xdebug/Blackfire on the PUT /V1/products endpoint will reveal which new interceptors or observers were added by the upgrade, allowing targeted optimization. (2) The synchronous REST API processing 500 sequential product saves is architecturally fragile — Magento's async bulk API (POST /V1/bulk with message queue via RabbitMQ or MySQL) allows the server to accept the batch immediately and process items asynchronously, eliminating timeout issues entirely. (3) The ERP's immediate retry pattern causes a thundering herd effect — when 200 of 500 requests fail, the ERP immediately fires 200 retries while the remaining 300 original requests are still in flight, compounding server overload. Exponential backoff with jitter (randomized delay) spreads retry load over time, allowing the server to recover. A is wrong because increasing timeouts and rate limits treats symptoms while amplifying the root cause — longer timeouts mean more concurrent connections consume php-fpm workers, and higher rate limits allow more load on an already struggling system. C is wrong because rolling back an entire platform upgrade is extreme and doesn't solve the architectural fragility — the synchronous 500-product batch was always a ticking time bomb even before the upgrade. D is wrong because while smaller batches reduce per-request time, the fixed 1-second delay makes the total integration time 10+ seconds × 10 batches = 100+ seconds minimum, and it doesn't address the underlying API performance regression or retry thundering herd. E is wrong because GraphQL mutations in Magento 2 ultimately invoke the same service layer and plugins as REST — the performance characteristics would be identical since the bottleneck is in the business logic layer, not the API framework.",
+    "codeExample": "<?php\n// Diagnostic: Profile the product save path for new plugin overhead\n// bin/magento dev:profiler:enable\n// Then check: var/log/profiler.csv for method timings\n\n// Identify plugins added by upgrade:\n// bin/magento dev:di:info 'Magento\\Catalog\\Api\\ProductRepositoryInterface'\n// Output reveals all interceptors on the save path\n\n// SOLUTION: Use Magento's Async Bulk API\n// ERP sends single request instead of 500:\n// POST /rest/V1/bulk\n// Content-Type: application/json\n$bulkPayload = [\n    'entity' => [\n        // 500 products in one request\n        ['product' => ['sku' => 'SKU001', 'price' => 29.99]],\n        ['product' => ['sku' => 'SKU002', 'price' => 39.99]],\n        // ...\n    ]\n];\n// Response: 202 Accepted with bulk_uuid for status tracking\n// GET /rest/V1/bulk/{bulkUuid}/status\n\n// ERP Retry Configuration (advise vendor):\n// retry_delay = base_delay * (2 ^ attempt) + random(0, 1000ms)\n// Attempt 1: ~1s, Attempt 2: ~2s, Attempt 3: ~4s\n// Max retries: 3 (not 5 with immediate retry)"
+  },
+  {
+    "id": 140,
+    "category": "Integration Architecture",
+    "difficulty": "Hard",
+    "question": "An enterprise retailer needs to integrate Adobe Commerce with their on-premise ERP system for order and inventory synchronization. The ERP has limited API throughput (50 requests/minute) and orders must be reflected in the ERP within 15 minutes. During flash sales, the store processes 500+ orders per minute. Which integration architecture best addresses these constraints?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Direct synchronous API calls from Commerce order placement observers to the ERP, with retry logic on failure"
+      },
+      {
+        "id": "B",
+        "text": "Asynchronous message queue with a middleware layer that batches orders and respects ERP rate limits via a token bucket algorithm"
+      },
+      {
+        "id": "C",
+        "text": "Scheduled cron job running every 5 minutes that exports all new orders as a flat file to the ERP's SFTP server"
+      },
+      {
+        "id": "D",
+        "text": "Real-time webhook from Commerce to ERP with an in-memory cache to deduplicate retries"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because an asynchronous message queue (RabbitMQ) decouples order placement from ERP processing, preventing checkout slowdowns during flash sales. The middleware layer acts as a buffer that accumulates orders and dispatches them in batches within the ERP's 50 req/min limit, while the token bucket algorithm ensures smooth rate limiting without bursts. This architecture guarantees orders reach the ERP well within the 15-minute SLA even during peak load. A is wrong because synchronous calls would block checkout, and at 500+ orders/minute against a 50 req/min ERP limit, the queue would grow unboundedly, causing timeouts and order failures. C is wrong because a 5-minute cron with flat file export introduces unnecessary latency, lacks real-time error handling, and flat file parsing is fragile compared to structured API calls — plus it doesn't solve the rate limit problem if the batch exceeds 50 orders. D is wrong because webhooks are still synchronous from Commerce's perspective (waiting for acknowledgment), and an in-memory cache provides no durability — if the middleware process restarts, pending orders are lost.",
+    "codeExample": "// publisher.xml - Define async topic for ERP order sync\n<config xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n        xsi:noNamespaceSchemaLocation=\"urn:magento:framework:Communication/etc/communication.xsd\">\n    <topic name=\"erp.order.sync\" request=\"string\">\n        <handler name=\"erpOrderHandler\"\n                 type=\"Vendor\\ErpIntegration\\Model\\Queue\\OrderConsumer\"\n                 method=\"process\"/>\n    </topic>\n</config>\n\n// OrderConsumer.php - Batch-aware consumer with rate limiting\nclass OrderConsumer\n{\n    public function __construct(\n        private ErpClient $erpClient,\n        private RateLimiter $rateLimiter,\n        private LoggerInterface $logger\n    ) {}\n\n    public function process(string $orderJson): void\n    {\n        $this->rateLimiter->waitForToken(); // blocks until rate limit allows\n        $orderData = json_decode($orderJson, true);\n        $this->erpClient->pushOrder($orderData);\n    }\n}"
+  },
+  {
+    "id": 141,
+    "category": "Integration Architecture",
+    "difficulty": "Medium",
+    "question": "A B2B merchant integrates Adobe Commerce with Salesforce CRM for bidirectional customer data synchronization. Sales reps update company credit limits in Salesforce, while customers update their addresses in Commerce. Both systems have experienced data conflicts where stale updates overwrite newer data. Which strategy best prevents data conflicts while maintaining near-real-time sync?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use timestamp-based last-write-wins resolution, where each system includes an updated_at field and the most recent timestamp always takes precedence"
+      },
+      {
+        "id": "B",
+        "text": "Designate a system of record per field — Salesforce owns credit-related fields, Commerce owns address fields — and reject inbound updates to fields owned by the other system"
+      },
+      {
+        "id": "C",
+        "text": "Implement a full nightly batch sync from Salesforce to Commerce, treating Salesforce as the single source of truth for all customer data"
+      },
+      {
+        "id": "D",
+        "text": "Store all customer data exclusively in Commerce and use Salesforce only as a read-only mirror via one-way push"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because field-level ownership eliminates conflicts by design. Since credit limits are a sales/finance concern managed in Salesforce and addresses are customer-facing data managed in Commerce, each system is authoritative for its domain. Inbound sync only updates fields the receiving system does not own, making conflicts impossible. This is the standard pattern for bidirectional integration in enterprise commerce. A is wrong because last-write-wins causes silent data loss — if a sales rep updates a credit limit in Salesforce and then a customer updates their address in Commerce seconds later, the Commerce sync could overwrite the credit limit with stale data if the systems sync different field sets at different intervals. Clock skew between systems further compounds this risk. C is wrong because a nightly batch sync does not meet the near-real-time requirement and making Salesforce the sole source of truth ignores that customers manage their own addresses in Commerce, creating a poor user experience where address changes take 24 hours to reflect. D is wrong because it defeats the purpose of CRM integration — sales reps need to manage customer relationships, credit terms, and segmentation in Salesforce, and making it read-only removes their ability to enrich customer data.",
+    "codeExample": ""
+  },
+  {
+    "id": 142,
+    "category": "Integration Architecture",
+    "difficulty": "Hard",
+    "question": "A retailer with 200,000 SKUs integrates Adobe Commerce with an external PIM (Product Information Management) system. Full catalog imports take 6+ hours and cause performance degradation. Products change frequently — approximately 2,000 SKUs are updated daily. Which delta sync architecture minimizes import time while ensuring data consistency?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Query the PIM API for all products nightly, compare each product hash against Commerce, and import only changed products"
+      },
+      {
+        "id": "B",
+        "text": "Have the PIM publish change events to a message queue with product IDs; Commerce consumes events and fetches only changed product data via API"
+      },
+      {
+        "id": "C",
+        "text": "Use Commerce's built-in scheduled import with a CSV file containing all 200,000 products, relying on Magento's internal change detection"
+      },
+      {
+        "id": "D",
+        "text": "Implement a webhook from PIM that pushes complete product data to Commerce on every save, processing updates synchronously"
+      },
+      {
+        "id": "E",
+        "text": "Maintain a changelog table in a shared database between PIM and Commerce, polling it every minute for changed product IDs"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because event-driven delta sync is the optimal pattern for this scenario. The PIM publishes lightweight change events (just product IDs and change type) to a message queue when products are modified. Commerce consumers pick up these events and fetch only the 2,000 changed products daily via targeted API calls, reducing import time from 6+ hours to minutes. The message queue provides durability (no lost changes), ordering, and natural backpressure handling. A is wrong because querying all 200,000 products to compute hashes still requires fetching the entire catalog from the PIM API, which is nearly as expensive as a full import — the comparison saves import time but not API call time, and it still takes hours to iterate the full catalog. C is wrong because importing a CSV with all 200,000 products means Commerce must parse and evaluate every row even if unchanged, which still causes the same 6+ hour performance degradation. Magento's change detection compares at the row level but still reads every row. D is wrong because synchronous webhooks on every product save would overwhelm Commerce during bulk PIM updates (e.g., a category-wide price change affecting thousands of products), and synchronous processing creates tight coupling where PIM save operations fail if Commerce is unavailable. E is wrong because a shared database creates tight infrastructure coupling between PIM and Commerce, violates microservice boundaries, requires both systems to share credentials to the same database, and polling every minute adds unnecessary latency compared to event-driven push.",
+    "codeExample": "// queue_consumer.xml\n<config xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <consumer name=\"pim.product.sync\"\n              queue=\"pim.product.changes\"\n              handler=\"Vendor\\PimSync\\Model\\Consumer\\ProductChangeHandler::process\"\n              maxMessages=\"100\"\n              connection=\"amqp\"/>\n</config>\n\n// ProductChangeHandler.php\nclass ProductChangeHandler\n{\n    public function __construct(\n        private PimApiClient $pimClient,\n        private ProductRepositoryInterface $productRepository,\n        private ProductInterfaceFactory $productFactory\n    ) {}\n\n    public function process(string $message): void\n    {\n        $event = json_decode($message, true);\n        $pimProduct = $this->pimClient->getProduct($event['sku']);\n\n        try {\n            $product = $this->productRepository->get($event['sku']);\n        } catch (NoSuchEntityException) {\n            $product = $this->productFactory->create();\n            $product->setSku($event['sku']);\n        }\n\n        $product->setName($pimProduct['name']);\n        $product->setPrice($pimProduct['price']);\n        // ... map remaining attributes\n        $this->productRepository->save($product);\n    }\n}"
+  },
+  {
+    "id": 143,
+    "category": "Integration Architecture",
+    "difficulty": "Hard",
+    "question": "An Adobe Commerce merchant is implementing a payment gateway integration for a multi-country store. The solution must support PCI DSS SAQ A-EP compliance, handle 3D Secure 2.0 authentication flows, and allow customers to save payment methods for future purchases. Which tokenization and integration architecture satisfies all requirements?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Collect card data in Commerce-hosted form fields, encrypt client-side with the gateway's public key, send encrypted payload to Commerce backend which forwards to the gateway for tokenization"
+      },
+      {
+        "id": "B",
+        "text": "Use the gateway's hosted payment fields (iframes) embedded in the checkout page; the gateway returns a single-use nonce to Commerce, which exchanges it server-side for a vault token"
+      },
+      {
+        "id": "C",
+        "text": "Redirect customers entirely to the payment gateway's hosted payment page; upon completion, the gateway redirects back with a transaction ID"
+      },
+      {
+        "id": "D",
+        "text": "Collect card data in Commerce form fields, transmit to Commerce server over TLS, then call the gateway API server-to-server to create a token for vault storage"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because gateway-hosted iframes (hosted fields) keep card data entirely within the gateway's PCI-certified environment — card numbers never touch Commerce's servers or JavaScript, satisfying SAQ A-EP requirements. The single-use nonce returned to Commerce is not sensitive card data, so it can safely pass through Commerce's backend. Server-side nonce-to-vault-token exchange enables saved payment methods without Commerce ever handling raw card data. The iframe approach also supports 3D Secure 2.0 because the gateway can trigger the authentication challenge within its iframe context. A is wrong because even though the data is encrypted client-side, Commerce's JavaScript still handles raw card data before encryption, which expands PCI scope to SAQ D (full assessment) rather than SAQ A-EP. The merchant's frontend code touches cardholder data, making the merchant responsible for securing that code. C is wrong because a full redirect to a hosted payment page satisfies PCI SAQ A (simplest), but it breaks the checkout UX — customers leave the merchant site, which increases cart abandonment by 20-30%. It also makes saving payment methods difficult because the merchant never receives a token in the standard redirect flow. D is wrong because collecting card data in Commerce form fields and transmitting to the Commerce server means cardholder data traverses the merchant's infrastructure, requiring full PCI DSS SAQ D compliance — the most burdensome assessment level. This is the exact scenario tokenization is designed to avoid.",
+    "codeExample": "// Gateway hosted fields integration in checkout\n// view/frontend/web/js/view/payment/method-renderer/gateway-method.js\ndefine(['Magento_Checkout/js/view/payment/default'], function (Component) {\n    return Component.extend({\n        defaults: {\n            template: 'Vendor_Gateway/payment/form'\n        },\n\n        initHostedFields: function () {\n            // Gateway SDK renders secure iframes for card fields\n            this.hostedFields = GatewaySDK.create('hosted-fields', {\n                fields: {\n                    number: { selector: '#card-number' },\n                    expirationDate: { selector: '#expiry' },\n                    cvv: { selector: '#cvv' }\n                },\n                threeDSecure: { enabled: true, version: 2 }\n            });\n        },\n\n        placeOrder: function () {\n            // Tokenize returns nonce - no card data touches our JS\n            this.hostedFields.tokenize().then(function (result) {\n                this.paymentNonce = result.nonce;\n                this._super(); // sends nonce to Commerce backend\n            }.bind(this));\n        }\n    });\n});"
+  },
+  {
+    "id": 144,
+    "category": "Integration Architecture",
+    "difficulty": "Medium",
+    "question": "A merchant ships from 3 warehouses using 4 different carriers (FedEx, UPS, USPS, DHL). They need real-time shipping rates at checkout and automated label generation upon shipment. The carrier APIs have varying response times (200ms to 2 seconds). Which architecture ensures fast checkout while supporting multi-carrier label generation?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Call all carrier APIs sequentially during checkout rate calculation, cache results for 30 minutes, and use the same carrier API for label generation at shipment time"
+      },
+      {
+        "id": "B",
+        "text": "Call all carrier APIs in parallel during checkout with a 3-second aggregate timeout, return available rates as they resolve, and use a queue-based async process for label generation"
+      },
+      {
+        "id": "C",
+        "text": "Pre-calculate all possible rates nightly via cron for every ZIP code combination and store them in a lookup table; generate labels synchronously when admin creates a shipment"
+      },
+      {
+        "id": "D",
+        "text": "Use a single shipping aggregator API that proxies all carrier rate requests and label generation through one unified endpoint"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because parallel API calls with an aggregate timeout ensure the checkout page loads within an acceptable window (3 seconds max). If a slow carrier (e.g., DHL at 2 seconds) hasn't responded, the checkout still displays rates from faster carriers. For label generation, async queue processing is appropriate because labels don't need to be generated instantly at order placement — they're created when warehouse staff process shipments, and queue-based processing handles carrier API failures gracefully with retries. A is wrong because sequential calls to 4 carriers across 3 warehouses means up to 12 sequential API calls. At worst case (2 seconds each), this is a 24-second wait at checkout, which is unacceptable — customers will abandon the cart. Caching helps on subsequent requests but doesn't solve the first-hit problem. C is wrong because pre-calculating rates for every ZIP code combination is computationally infeasible. With ~43,000 US ZIP codes, 4 carriers, 3 warehouses, and multiple service levels, you'd need billions of rate calculations nightly. Rates also change based on package dimensions, weight, and carrier promotions, making cached rates inaccurate. D is wrong because while shipping aggregators simplify integration, relying on a single third-party proxy adds a single point of failure. If the aggregator goes down, the merchant loses all shipping functionality. It also adds latency (an extra network hop) and the aggregator's rate markup increases shipping costs.",
+    "codeExample": ""
+  },
+  {
+    "id": 145,
+    "category": "Integration Architecture",
+    "difficulty": "Hard",
+    "question": "An Adobe Commerce implementation uses RabbitMQ to synchronize order data with an external OMS (Order Management System). During a recent peak sale, messages accumulated in the queue faster than the OMS consumer could process them, causing a 4-hour sync delay. The OMS API supports batching (up to 50 orders per call) but the current consumer processes one order per message. Which RabbitMQ topology and consumer changes best resolve the throughput bottleneck?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Increase the prefetch count to 50, collect messages in the consumer until 50 accumulate or 10 seconds elapse, then send a single batch API call to the OMS"
+      },
+      {
+        "id": "B",
+        "text": "Create 50 parallel consumers on the same queue, each processing one message at a time, to achieve 50x throughput"
+      },
+      {
+        "id": "C",
+        "text": "Switch from RabbitMQ to a database table as the queue, using SELECT FOR UPDATE with SKIP LOCKED for concurrent consumption"
+      },
+      {
+        "id": "D",
+        "text": "Add a dead letter exchange with automatic retry, assuming the bottleneck is caused by transient OMS API failures"
+      },
+      {
+        "id": "E",
+        "text": "Increase the RabbitMQ queue's max-length to unlimited so messages never get dropped during peaks"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct because it directly addresses the root cause: the OMS API supports batching but the consumer sends one order per API call, wasting 98% of available throughput. Setting prefetch to 50 allows the consumer to pull 50 messages from the queue at once. The consumer collects them into a batch (with a 10-second timeout to avoid waiting indefinitely when volume is low) and sends one batch API call to the OMS. This reduces API calls by 50x while using the OMS's native batch endpoint, resolving the throughput gap. B is wrong because 50 parallel consumers each making individual API calls means 50 concurrent connections to the OMS, which likely exceeds the OMS's rate limits or connection pool. It also doesn't leverage the batch API — 50 single-order calls are less efficient than 1 batch call of 50 orders. Additionally, 50 consumers increase infrastructure costs and complexity. C is wrong because replacing RabbitMQ with a database queue is a step backward in architecture. Database-based queues have higher latency, don't support native pub/sub patterns, and SELECT FOR UPDATE creates lock contention under high concurrency. The problem is consumer inefficiency, not the message broker. D is wrong because the problem is throughput, not failures. Dead letter exchanges handle poison messages and transient errors, but the messages aren't failing — they're processing too slowly. Adding DLX retry logic adds complexity without addressing the batch processing gap. E is wrong because increasing max-length prevents message drops but doesn't increase processing speed. If the consumer processes messages slower than they arrive, an unlimited queue just delays the inevitable — it doesn't solve the throughput problem, and unbounded queues eventually exhaust disk space.",
+    "codeExample": "// BatchOrderConsumer.php\nclass BatchOrderConsumer\n{\n    private array $batch = [];\n    private float $batchStartTime = 0;\n    private const BATCH_SIZE = 50;\n    private const BATCH_TIMEOUT = 10; // seconds\n\n    public function __construct(\n        private OmsApiClient $omsClient,\n        private LoggerInterface $logger\n    ) {}\n\n    public function process(EnvelopeInterface $envelope): void\n    {\n        if (empty($this->batch)) {\n            $this->batchStartTime = microtime(true);\n        }\n\n        $this->batch[] = json_decode($envelope->getBody(), true);\n\n        $elapsed = microtime(true) - $this->batchStartTime;\n        if (count($this->batch) >= self::BATCH_SIZE || $elapsed >= self::BATCH_TIMEOUT) {\n            $this->flush();\n        }\n    }\n\n    private function flush(): void\n    {\n        if (empty($this->batch)) {\n            return;\n        }\n        $this->logger->info(sprintf('Flushing %d orders to OMS', count($this->batch)));\n        $this->omsClient->batchCreateOrders($this->batch);\n        $this->batch = [];\n    }\n}"
+  },
+  {
+    "id": 146,
+    "category": "Integration Architecture",
+    "difficulty": "Medium",
+    "question": "An Adobe Commerce store integrates with 5 external services (ERP, PIM, CRM, shipping, payment). During a recent ERP outage, cascading failures caused the checkout and product pages to become unresponsive because synchronous ERP calls timed out after 30 seconds. Which API gateway pattern combination prevents cascading failures while maintaining service availability?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Implement a circuit breaker that trips after 5 consecutive ERP failures, returning cached/fallback data for a cooldown period, combined with per-service timeout policies (2 seconds for checkout-critical calls)"
+      },
+      {
+        "id": "B",
+        "text": "Add retry with exponential backoff to all external service calls, starting at 1 second and doubling up to 60 seconds, ensuring eventual delivery"
+      },
+      {
+        "id": "C",
+        "text": "Set a global 5-second timeout for all external API calls and return HTTP 503 to the user if any service is unavailable"
+      },
+      {
+        "id": "D",
+        "text": "Deploy a load balancer in front of all external services to distribute traffic evenly and prevent any single service from being overwhelmed"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct because the circuit breaker pattern directly prevents cascading failures. After 5 consecutive ERP failures, the circuit 'opens' and immediately returns cached or fallback data without attempting the ERP call, eliminating the 30-second timeout wait. Per-service timeouts of 2 seconds for checkout-critical paths ensure that even before the circuit trips, individual request latency is bounded. During the cooldown period, the circuit periodically allows a single test request to check if the ERP has recovered (half-open state). This keeps checkout functional with degraded but acceptable data. B is wrong because retry with exponential backoff makes cascading failures worse, not better. If the ERP is down, retrying with increasing delays means each request now makes multiple calls to the failing service, amplifying load when the ERP comes back up (thundering herd). During an outage, retries just waste resources and increase latency — a checkout request could wait up to 1+2+4+8+16+32+60 = 123 seconds across retries. C is wrong because returning 503 to users is the opposite of graceful degradation. Customers see an error page and leave. The goal is to keep the store operational with fallback data (e.g., cached inventory levels) rather than failing entirely because one of five services is down. D is wrong because a load balancer distributes traffic across multiple instances of the same service, but there's only one ERP endpoint. A load balancer cannot route around a fully down service, and it doesn't address timeout or failure isolation concerns.",
+    "codeExample": "// CircuitBreaker implementation for external service calls\nclass CircuitBreaker\n{\n    private const STATE_CLOSED = 'closed';\n    private const STATE_OPEN = 'open';\n    private const STATE_HALF_OPEN = 'half_open';\n\n    public function __construct(\n        private CacheInterface $cache,\n        private int $failureThreshold = 5,\n        private int $cooldownSeconds = 30\n    ) {}\n\n    public function call(string $service, callable $action, callable $fallback): mixed\n    {\n        $state = $this->getState($service);\n\n        if ($state === self::STATE_OPEN) {\n            if ($this->cooldownExpired($service)) {\n                $this->setState($service, self::STATE_HALF_OPEN);\n            } else {\n                return $fallback(); // Return cached/default data\n            }\n        }\n\n        try {\n            $result = $action();\n            $this->recordSuccess($service);\n            return $result;\n        } catch (\\Throwable $e) {\n            $this->recordFailure($service);\n            if ($this->getFailureCount($service) >= $this->failureThreshold) {\n                $this->setState($service, self::STATE_OPEN);\n            }\n            return $fallback();\n        }\n    }\n}"
+  },
+  {
+    "id": 147,
+    "category": "Integration Architecture",
+    "difficulty": "Hard",
+    "question": "An Adobe Commerce merchant receives product data from multiple sources: a PIM system provides marketing content in XML, an ERP sends pricing/inventory as JSON via API, and a supplier portal delivers product specs in CSV files via SFTP. Each source uses different identifiers (PIM uses GTIN, ERP uses internal SKU, supplier uses manufacturer part number). Which ETL architecture ensures reliable data consolidation into Commerce's catalog?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Build direct point-to-point integrations from each source system into Commerce's product save API, with inline field mapping and transformation in each integration module"
+      },
+      {
+        "id": "B",
+        "text": "Implement a canonical data model with a cross-reference mapping table that translates between source identifiers, run source-specific extractors into a staging area, transform to canonical format, then load into Commerce via Import/Export framework"
+      },
+      {
+        "id": "C",
+        "text": "Standardize all source systems to output the same JSON format with Commerce SKU as the identifier, eliminating the need for transformation"
+      },
+      {
+        "id": "D",
+        "text": "Import all data as-is into separate Commerce custom attributes per source, and resolve conflicts at display time using frontend logic"
+      },
+      {
+        "id": "E",
+        "text": "Use Commerce's built-in REST API to pull data from all three sources on a schedule, mapping fields directly in API request handlers"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because a canonical data model with cross-reference mapping is the standard enterprise integration pattern for multi-source data consolidation. The cross-reference table (GTIN ↔ SKU ↔ MPN) enables identifier resolution regardless of which source provides the data. Source-specific extractors handle format differences (XML, JSON, CSV) independently, normalizing each into the canonical format in a staging area where validation and conflict resolution occur before loading. Using Commerce's Import/Export framework for the load phase leverages Magento's built-in indexing and cache invalidation. A is wrong because point-to-point integrations create an n-to-n maintenance nightmare. With 3 sources, you have 3 separate transformation codebases, each tightly coupled to both the source format and Commerce's internal structure. Adding a 4th source means building another complete integration. There's also no staging area for cross-source conflict resolution — if PIM and ERP disagree on a product name, whichever runs last wins silently. C is wrong because standardizing output formats across external systems is rarely feasible. The merchant typically doesn't control the PIM vendor's export format, the ERP's API schema, or the supplier's CSV layout. Even if possible, it pushes transformation complexity to each source system rather than centralizing it, and requires coordinating changes across multiple vendors. D is wrong because storing raw multi-source data in separate custom attributes pushes integration complexity to the frontend, where it doesn't belong. Frontend logic shouldn't resolve data conflicts — this creates performance problems (multiple attribute lookups per product), inconsistent behavior across channels (API consumers see raw conflicting data), and makes search/filtering unreliable. E is wrong because Commerce pulling from sources inverts the recommended data flow. Commerce would need credentials and network access to the PIM, ERP, and SFTP server, creating tight coupling. REST API handlers are not designed for ETL transformation logic, and pull-based scheduling means delays in reflecting source changes.",
+    "codeExample": "// CrossReferenceMapping.php - Identifier resolution\nclass CrossReferenceMapping\n{\n    public function __construct(private ResourceConnection $resource) {}\n\n    public function resolveToSku(string $sourceId, string $sourceType): string\n    {\n        $connection = $this->resource->getConnection();\n        $select = $connection->select()\n            ->from('integration_xref_mapping', ['commerce_sku'])\n            ->where('source_identifier = ?', $sourceId)\n            ->where('source_type = ?', $sourceType);\n\n        $sku = $connection->fetchOne($select);\n        if (!$sku) {\n            throw new IntegrationException(\n                \"No SKU mapping for {$sourceType} identifier: {$sourceId}\"\n            );\n        }\n        return $sku;\n    }\n}\n\n// CanonicalProductModel.php - Unified product representation\nclass CanonicalProductModel\n{\n    public string $sku;\n    public string $name;\n    public float $price;\n    public int $qty;\n    public array $attributes = [];\n    public string $sourceSystem;\n    public string $sourceTimestamp;\n\n    public static function fromPimXml(\\SimpleXMLElement $xml, CrossReferenceMapping $xref): self\n    {\n        $model = new self();\n        $model->sku = $xref->resolveToSku((string) $xml->gtin, 'gtin');\n        $model->name = (string) $xml->marketing_title;\n        $model->sourceSystem = 'pim';\n        return $model;\n    }\n}"
+  },
+  {
+    "id": 148,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Hard",
+    "question": "A merchant reports that a custom discount total collector is applying discounts AFTER tax calculation, resulting in incorrect tax amounts. The collector is configured with `<sort_order>350</sort_order>` in sales.xml. The default tax collector has sort_order 450. What is the root cause and correct architectural fix?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Change the custom collector's sort_order to 500 so it runs after tax, then recalculate tax in a second pass"
+      },
+      {
+        "id": "B",
+        "text": "The sort_order 350 is correct (before tax at 450), but the collector must call $total->setBaseGrandTotal() to trigger tax recalculation"
+      },
+      {
+        "id": "C",
+        "text": "The collector's sort_order places it before tax, but it likely modifies the wrong address attribute — it should modify $total->setSubtotalWithDiscount() and $total->addTotalAmount() so the tax collector picks up the discounted subtotal"
+      },
+      {
+        "id": "D",
+        "text": "Override the tax collector to check for the custom discount and subtract it from the taxable amount before calculating tax"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct: Total collectors communicate through the $total object and address attributes. A discount collector at sort_order 350 runs before tax (450), which is the correct ordering. However, if the collector only modifies the grand total directly without properly setting subtotalWithDiscount and calling addTotalAmount/setTotalAmount on the 'discount' collector code, the tax collector won't see the reduced amount because it reads from subtotal-related fields, not grand total. The fix is ensuring the discount collector properly populates the total amounts that downstream collectors depend on.\n\nA is wrong: Moving the discount after tax would mean tax is calculated on the full price, then a discount applied — this is the opposite of the desired behavior and doesn't fix the data flow issue.\n\nB is wrong: setBaseGrandTotal() does not trigger any recalculation. Total collectors run sequentially in sort_order; there is no automatic recalculation mechanism. Each collector reads from and writes to specific total fields.\n\nD is wrong: Overriding the tax collector creates tight coupling between collectors. The architecture is designed so collectors communicate through the $total object, not by being aware of each other's logic.",
+    "codeExample": "// Correct discount collector implementation in collect():\npublic function collect(\n    Quote $quote,\n    ShippingAssignmentInterface $shippingAssignment,\n    Total $total\n): self {\n    parent::collect($quote, $shippingAssignment, $total);\n    \n    $discount = $this->calculateDiscount($quote);\n    \n    // These lines ensure tax collector sees the discount\n    $total->setSubtotalWithDiscount(\n        $total->getSubtotal() - $discount\n    );\n    $total->addTotalAmount('custom_discount', -$discount);\n    $total->addBaseTotalAmount('custom_discount', -$discount);\n    \n    return $this;\n}"
+  },
+  {
+    "id": 149,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Medium",
+    "question": "During the quote-to-order conversion process, at what point does Magento 2 decrement product inventory (stock), and what architectural pattern controls this?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Inventory is decremented inside QuoteManagement::placeOrder() immediately after the order is saved to the database"
+      },
+      {
+        "id": "B",
+        "text": "Inventory is decremented by an observer on the checkout_submit_all_after event, after the order and payment have been processed successfully"
+      },
+      {
+        "id": "C",
+        "text": "The InventoryReservation system places a reservation via the inventory_sales_source_deduction plugin during order placement, and actual stock is adjusted asynchronously"
+      },
+      {
+        "id": "D",
+        "text": "Inventory is decremented inside the payment gateway's capture method to ensure stock is only reduced when payment is confirmed"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct: Starting with MSI (Multi-Source Inventory), Magento uses a reservation-based system. During order placement, a reservation (negative quantity entry) is created in inventory_reservation table. This immediately reflects in salable quantity calculations without modifying the actual source_item quantity. The actual source deduction happens later during shipment or through asynchronous processing. This prevents overselling while keeping the stock modification decoupled from the order placement transaction.\n\nA is wrong: QuoteManagement::placeOrder() orchestrates the conversion but does not directly handle inventory logic. The inventory system is decoupled from the order management layer.\n\nB is wrong: This was closer to the legacy (pre-MSI) CatalogInventory behavior where an observer on sales events would modify stock. The modern MSI architecture uses reservations rather than direct decrements on event observers.\n\nD is wrong: Inventory and payment are separate concerns. Tying stock to payment capture would mean inventory isn't reserved during authorization-only flows, leading to overselling. The reservation system handles this independently of payment state.",
+    "codeExample": ""
+  },
+  {
+    "id": 150,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Hard",
+    "question": "You are building a custom payment method that must support both authorize-only and authorize+capture flows, integrate with Magento Vault for stored cards, and work with the Payment Gateway Command pattern. Which components must you implement?",
+    "options": [
+      {
+        "id": "A",
+        "text": "A class extending \\Magento\\Payment\\Model\\Method\\AbstractMethod with authorize() and capture() methods, plus a VaultPaymentInterface implementation"
+      },
+      {
+        "id": "B",
+        "text": "A virtual type for PaymentGatewayFacade, command pool with 'authorize', 'capture', and 'vault_authorize' commands, request builders, response handlers, a vault payment config provider, and a token UI component provider"
+      },
+      {
+        "id": "C",
+        "text": "A PaymentMethodInterface implementation, separate REST API controllers for authorize and capture, and a plugin on VaultPaymentInterface to store tokens"
+      },
+      {
+        "id": "D",
+        "text": "A GatewayCommand class for each operation, a TransferFactory, and a Magento\\Vault\\Model\\Method override to enable token storage"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: The modern Payment Gateway Command pattern uses a facade (Magento\\Payment\\Model\\Method\\Adapter configured as a virtual type) backed by a command pool. Each operation (authorize, capture, vault_authorize, vault_capture) is a separate command composed of BuilderInterface request builders, TransferFactoryInterface, ClientInterface (HTTP client), and HandlerInterface response handlers. Vault integration requires a PaymentTokenProviderInterface (config provider) and a TokenUiComponentProviderInterface for the frontend stored card display. This is all wired through di.xml virtual types.\n\nA is wrong: AbstractMethod is the legacy approach. Magento's Payment Gateway architecture explicitly replaces method-level authorize()/capture() with the command pool pattern. Vault integration also doesn't work through a standalone VaultPaymentInterface implementation — it's integrated into the command pool.\n\nC is wrong: Payment methods don't use REST controllers for processing. The command pool handles all operations internally. Vault token storage is handled by response handlers within the command pipeline, not by plugins.\n\nD is wrong: While GatewayCommand and TransferFactory are real components, you don't override Magento\\Vault\\Model\\Method. Vault integration requires configuring the vault provider and token components, not extending the vault method class. This answer also omits the critical request builders and response handlers.",
+    "codeExample": "<!-- di.xml: Payment Gateway Command Pool (simplified) -->\n<virtualType name=\"CustomGatewayFacade\"\n    type=\"Magento\\Payment\\Model\\Method\\Adapter\">\n    <arguments>\n        <argument name=\"code\" xsi:type=\"const\">\n            Custom\\Payment\\Model\\Ui\\ConfigProvider::CODE\n        </argument>\n        <argument name=\"commandPool\" xsi:type=\"object\">\n            CustomGatewayCommandPool\n        </argument>\n        <argument name=\"valueHandlerPool\" xsi:type=\"object\">\n            CustomGatewayValueHandlerPool\n        </argument>\n    </arguments>\n</virtualType>\n\n<virtualType name=\"CustomGatewayCommandPool\"\n    type=\"Magento\\Payment\\Gateway\\Command\\CommandPool\">\n    <arguments>\n        <argument name=\"commands\" xsi:type=\"array\">\n            <item name=\"authorize\" xsi:type=\"object\">\n                CustomGatewayAuthorizeCommand\n            </item>\n            <item name=\"capture\" xsi:type=\"object\">\n                CustomGatewayCaptureCommand\n            </item>\n            <item name=\"vault_authorize\" xsi:type=\"object\">\n                CustomVaultAuthorizeCommand\n            </item>\n        </argument>\n    </arguments>\n</virtualType>"
+  },
+  {
+    "id": 151,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Medium",
+    "question": "A client wants to add a custom order status 'quality_check' that appears between 'processing' and 'complete'. Orders in this status should NOT be invoiceable or shippable. What is the correct architectural approach?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create a new order STATE 'quality_check' in the state machine and assign a status to it, then configure state transitions to prevent invoice and shipment actions"
+      },
+      {
+        "id": "B",
+        "text": "Create a new order STATUS 'quality_check' assigned to the existing 'processing' state, and use a plugin on OrderManagement to prevent invoice/shipment creation when the order has this status"
+      },
+      {
+        "id": "C",
+        "text": "Create a new order STATUS 'quality_check' assigned to a new custom STATE, and override the canInvoice()/canShip() methods on the Order model to return false for this state"
+      },
+      {
+        "id": "D",
+        "text": "Create a new order STATUS 'quality_check' assigned to the 'complete' state, since it comes after processing, and use an observer to block premature completion"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: In Magento 2, ORDER STATE is a fixed set (new, pending_payment, processing, complete, closed, canceled, holded, payment_review) that controls business logic — what actions are allowed. ORDER STATUS is a label assigned to a state and is extensible. The correct approach is creating a custom status under the 'processing' state (since the order IS still being processed) and using plugins to restrict specific actions based on status. The state machine already handles the broad permissions; you refine behavior at the status level.\n\nA is wrong: Order states are hardcoded in the Magento state machine (Order::STATE_* constants). Adding a new state requires modifying core framework code, which breaks upgradeability and is architecturally incorrect. States are not designed to be extended.\n\nC is wrong: While creating a custom state is technically possible by adding constants, it's against the intended architecture. Additionally, overriding canInvoice()/canShip() on the Order model is a heavy modification. The state already controls these methods — processing state allows invoicing/shipping. The right layer for customization is status-level logic via plugins.\n\nD is wrong: Assigning the status to the 'complete' state is semantically incorrect — 'complete' means the order is fully fulfilled (invoiced and shipped). An order in quality check hasn't been shipped yet. Putting it under 'complete' would break reporting and business logic.",
+    "codeExample": ""
+  },
+  {
+    "id": 152,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Hard",
+    "question": "An enterprise merchant requires multi-shipping checkout where a single quote can be split across 3+ shipping addresses. Each resulting order must have independent payment capture and fulfillment. What are the key architectural challenges an architect must address? (Select TWO)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Each shipping address creates a separate ShippingAssignment on the quote, and the Multishipping model converts each assignment into a separate order — but total collectors must handle per-address calculation without double-counting quote-level discounts"
+      },
+      {
+        "id": "B",
+        "text": "The payment method must support multiple authorize calls against a single transaction, since Magento creates one payment authorization per split order during the placeOrder loop"
+      },
+      {
+        "id": "C",
+        "text": "All split orders share a single order entity with multiple shipment records, so the main challenge is preventing partial invoicing from affecting sibling shipments"
+      },
+      {
+        "id": "D",
+        "text": "Multi-shipping checkout bypasses the standard QuoteManagement::placeOrder() and uses Multishipping::createOrders(), which means any plugins or observers on the standard place-order flow will NOT execute for multi-shipping orders"
+      },
+      {
+        "id": "E",
+        "text": "GraphQL mutations fully support multi-shipping checkout, so the architect only needs to ensure the headless frontend sends the correct address assignments"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "D"
+    ],
+    "explanation": "A is correct: Multi-shipping works by creating multiple ShippingAssignment objects on the quote, each with its own items and shipping address. During order creation, each assignment becomes a separate order. A critical challenge is that quote-level totals (cart rules, coupons) must be proportionally distributed across addresses without double-application. The total collectors must be aware of multi-shipping context.\n\nD is correct: The Multishipping model has its own order creation flow (createOrders()) that does NOT go through the standard QuoteManagement::placeOrder(). This is a major architectural concern because any customizations implemented as plugins on QuoteManagement or observers on checkout_submit events may not fire during multi-shipping checkout. The architect must ensure custom logic is replicated or hooked into the multi-shipping flow separately.\n\nB is wrong: Magento does not create one authorization per split order against a single transaction. Each split order gets its own independent payment object and authorization. The payment method needs to support multiple independent authorizations (which most gateways do), not multiple authorizations against a single transaction.\n\nC is wrong: Multi-shipping creates completely separate order entities, not one order with multiple shipments. Each order has its own order ID, payment, invoices, and shipments. They are independent after creation.\n\nE is wrong: As of Magento 2.4.x, GraphQL does NOT fully support multi-shipping checkout. Multi-shipping is primarily a Luma/frontend feature. A headless implementation would require significant custom GraphQL mutation development.",
+    "codeExample": ""
+  },
+  {
+    "id": 153,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Medium",
+    "question": "A merchant wants to allow guest checkout but also prompt users to create an account after order placement using the same email. What is the architectural difference between guest and customer quotes that an architect must account for?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Guest quotes store customer data (email, billing/shipping addresses) directly on the quote and order tables. Post-purchase account creation requires matching the order's email to the new customer entity via the convert-guest-to-customer flow, which reassigns existing orders."
+      },
+      {
+        "id": "B",
+        "text": "Guest and customer quotes are identical in structure — the only difference is the customer_id field. Post-purchase account creation simply populates this field on existing quote and order records."
+      },
+      {
+        "id": "C",
+        "text": "Guest quotes use a temporary customer entity (is_guest=1) in the customer_entity table. Post-purchase account creation flips this flag and sets a password."
+      },
+      {
+        "id": "D",
+        "text": "Guest quotes do not persist addresses to any address book. Post-purchase account creation requires re-entering all addresses since guest checkout data is only stored in session, not in the database."
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct: Guest quotes have customer_is_guest=1 and store all customer information (email, name, addresses) directly on the quote and sales_order tables rather than referencing a customer entity. When a guest creates an account post-purchase, Magento's Order Customer Management module handles reassigning orders: it creates a customer entity, copies addresses to the customer address book, and updates the customer_id on existing orders. The architect must ensure custom order-related logic handles both null and populated customer_id references.\n\nB is wrong: While customer_id is a key difference, it's not the only one. Guest quotes have no associated customer address book entries, no persistent cart capability, and different API access patterns (guest cart uses mask_id for REST API access instead of customer token). The data relationships are structurally different beyond just one field.\n\nC is wrong: Magento does NOT create temporary customer entities for guests. There is no is_guest flag on customer_entity. Guest checkout operates without any record in the customer tables — all data lives on the quote and order tables only.\n\nD is wrong: Guest checkout data IS persisted to the database — specifically on the quote, quote_address, sales_order, and sales_order_address tables. It's not session-only. The post-purchase account creation flow reads this data from the order tables to populate the new customer's address book.",
+    "codeExample": ""
+  },
+  {
+    "id": 154,
+    "category": "Checkout & Order Flow Architecture",
+    "difficulty": "Hard",
+    "question": "A merchant needs to implement a custom workflow where an order cannot be invoiced until a third-party ERP confirms stock allocation via webhook. After ERP confirmation, the invoice should be created automatically and trigger shipment preparation. What is the correct architectural approach?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Add a plugin on Sales\\Model\\Order::canInvoice() that checks a custom order attribute 'erp_stock_confirmed'. Create a webhook endpoint that sets this attribute and programmatically creates the invoice using InvoiceOrder service contract."
+      },
+      {
+        "id": "B",
+        "text": "Create a custom order status 'awaiting_erp' under the 'processing' state, use an observer on sales_order_invoice_save_before to prevent invoicing, and create a cron job that polls the ERP for confirmation."
+      },
+      {
+        "id": "C",
+        "text": "Override the Invoice controller's execute() method to add an ERP check before invoice creation, and create a separate controller for the ERP webhook callback."
+      },
+      {
+        "id": "D",
+        "text": "Use the payment gateway's 'pending' state to hold the order until ERP confirmation, then trigger a capture command which automatically generates the invoice."
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct: This approach uses the proper extension points. Pluginizing canInvoice() on the Order model controls whether the admin UI shows the invoice button AND prevents programmatic invoice creation until the condition is met. The webhook endpoint receives the ERP confirmation, sets the custom attribute (stored via extension_attributes or a custom column), and then uses the InvoiceOrder service contract (Magento\\Sales\\Api\\InvoiceOrderInterface) to create the invoice programmatically. Service contracts are the correct way to create invoices programmatically as they handle all events and validations.\n\nB is wrong: While custom status under 'processing' is a valid concept, using sales_order_invoice_save_before to prevent invoicing is too late — it fires during save, not during the canInvoice() check, so the admin would still see the Invoice button and get an error. Also, polling via cron is inefficient compared to a webhook. The ERP pushes updates; the system shouldn't poll.\n\nC is wrong: Overriding the admin controller only blocks admin-initiated invoicing, not API or programmatic invoice creation. It's the wrong layer — business logic should be in the model/service layer, not the controller. This approach also doesn't work for REST API invoice creation.\n\nD is wrong: Conflating payment state with order workflow creates tight coupling between unrelated concerns. The payment may be fully authorized and valid while the ERP check is pending. Using payment state for inventory workflow would break standard payment reporting and could cause issues with payment gateway timeout policies.",
+    "codeExample": "// Webhook controller for ERP stock confirmation\nclass ErpConfirmation implements HttpPostActionInterface\n{\n    public function __construct(\n        private OrderRepositoryInterface $orderRepository,\n        private InvoiceOrderInterface $invoiceOrder,\n        private JsonFactory $jsonFactory\n    ) {}\n\n    public function execute(): ResultInterface\n    {\n        $orderId = $this->getRequest()->getParam('order_id');\n        $order = $this->orderRepository->get($orderId);\n        \n        // Set ERP confirmation flag\n        $order->setData('erp_stock_confirmed', true);\n        $this->orderRepository->save($order);\n        \n        // Create invoice via service contract\n        $this->invoiceOrder->execute(\n            $orderId,\n            capture: true\n        );\n        \n        return $this->jsonFactory->create()\n            ->setData(['success' => true]);\n    }\n}"
+  },
+  {
+    "id": 155,
+    "category": "Customization Architecture",
+    "difficulty": "Hard",
+    "question": "A third-party module uses a plugin (interceptor) on \\Magento\\Catalog\\Api\\ProductRepositoryInterface::save() to enrich product data before persistence. Your module needs to modify the same method to enforce a business rule that must execute BEFORE the third-party plugin runs. The third-party plugin is declared with sortOrder=\"20\". Which approach should the Architect recommend?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create a before plugin on ProductRepositoryInterface::save() with sortOrder=\"10\" in di.xml"
+      },
+      {
+        "id": "B",
+        "text": "Create a preference for ProductRepositoryInterface that calls parent::save() after applying the business rule"
+      },
+      {
+        "id": "C",
+        "text": "Create an observer on catalog_product_save_before event to apply the business rule"
+      },
+      {
+        "id": "D",
+        "text": "Create an around plugin on ProductRepositoryInterface::save() with sortOrder=\"10\" in di.xml"
+      }
+    ],
+    "correctAnswers": [
+      "D"
+    ],
+    "explanation": "When you need guaranteed execution order relative to another plugin AND the ability to control whether the original method executes, an around plugin with a lower sortOrder is the correct choice.\n\nWhy D is correct:\nAn around plugin with sortOrder=\"10\" executes before the third-party's sortOrder=\"20\" plugin. Around plugins wrap the entire call chain — the before portion runs first, then $proceed() triggers remaining plugins and the original method. This gives full control over execution flow and ordering.\n\nWhy A is incorrect:\nA before plugin with sortOrder=\"10\" would execute before the third-party's before plugins, but before plugins cannot prevent execution or wrap the call. If the business rule needs to halt execution or modify the return value, a before plugin is insufficient.\n\nWhy B is incorrect:\nA preference replaces the entire implementation of the interface, which breaks ALL plugins registered on that interface — including the third-party plugin. Preferences and plugins are mutually exclusive on the same method: plugins are applied to the preference class, not the original.\n\nWhy C is incorrect:\nThe catalog_product_save_before event fires inside the Model::save() method, which is a different layer than the Repository::save() service contract. Observers cannot prevent execution (they can throw exceptions, but that's an anti-pattern), and execution order relative to plugins on the repository layer is unpredictable.",
+    "codeExample": "<!-- di.xml -->\n<type name=\"Magento\\Catalog\\Api\\ProductRepositoryInterface\">\n    <plugin name=\"vendor_business_rule\"\n            type=\"Vendor\\Module\\Plugin\\ProductRepositorySavePlugin\"\n            sortOrder=\"10\" />\n</type>\n\n// Plugin class\nclass ProductRepositorySavePlugin\n{\n    public function aroundSave(\n        ProductRepositoryInterface $subject,\n        callable $proceed,\n        ProductInterface $product,\n        $saveOptions = false\n    ): ProductInterface {\n        // Business rule enforced BEFORE third-party plugin (sortOrder 20)\n        if (!$this->businessRuleValidator->validate($product)) {\n            throw new CouldNotSaveException(__('Business rule violated.'));\n        }\n        return $proceed($product, $saveOptions);\n    }\n}"
+  },
+  {
+    "id": 156,
+    "category": "Customization Architecture",
+    "difficulty": "Medium",
+    "question": "A merchant needs to store a \"warehouse_location\" field on orders that comes from an external WMS (Warehouse Management System) during order placement. This field must be available via REST/GraphQL APIs and should not require database schema changes to the core sales_order table. Which approach should the Architect recommend?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Add a custom attribute to the order entity using an InstallData script and EAV setup"
+      },
+      {
+        "id": "B",
+        "text": "Define an extension attribute on OrderInterface with a custom table and a plugin to load/save it"
+      },
+      {
+        "id": "C",
+        "text": "Add the field directly to the sales_order table via db_schema.xml and create a preference for OrderRepository"
+      },
+      {
+        "id": "D",
+        "text": "Use a custom attribute with attribute_code registration via sales_setup and add it to the fieldset.xml"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "Extension attributes are the architecturally correct way to add custom data to service contracts without modifying core tables or breaking backward compatibility.\n\nWhy B is correct:\nExtension attributes are defined in extension_attributes.xml, backed by a custom table, and loaded/saved via plugins on the repository. They automatically appear in REST/GraphQL APIs through the generated ExtensionInterface. This approach keeps the core sales_order table untouched, is upgrade-safe, and follows Magento's service contract architecture.\n\nWhy A is incorrect:\nThe Order entity in Magento 2 is a flat entity, not an EAV entity. Unlike products and customers, orders do not support EAV attributes. Attempting to use EAV setup on the order entity will fail.\n\nWhy C is incorrect:\nAdding columns directly to sales_order via db_schema.xml modifies the core table schema, which violates the requirement. Creating a preference for OrderRepository replaces the entire repository implementation, breaking other modules' plugins and making upgrades fragile.\n\nWhy D is incorrect:\nWhile sales_setup custom attributes exist for order fields, they add columns directly to sales_order (which violates the no-core-schema-change requirement). fieldset.xml controls data copying between objects (e.g., quote to order) but does not provide API exposure on its own.",
+    "codeExample": "<!-- extension_attributes.xml -->\n<config>\n    <extension_attributes for=\"Magento\\Sales\\Api\\Data\\OrderInterface\">\n        <attribute code=\"warehouse_location\" type=\"string\" />\n    </extension_attributes>\n</config>\n\n<!-- Plugin to load the extension attribute -->\npublic function afterGet(\n    OrderRepositoryInterface $subject,\n    OrderInterface $order\n): OrderInterface {\n    $warehouseLocation = $this->resource->getWarehouseLocation($order->getEntityId());\n    $extensionAttributes = $order->getExtensionAttributes();\n    $extensionAttributes->setWarehouseLocation($warehouseLocation);\n    $order->setExtensionAttributes($extensionAttributes);\n    return $order;\n}"
+  },
+  {
+    "id": 157,
+    "category": "Customization Architecture",
+    "difficulty": "Hard",
+    "question": "An Architect is customizing a checkout page layout. The requirement is to move the shipping address form ABOVE the shipping methods block and inject a custom promotional banner between them. The existing layout has both blocks inside a \"checkout.steps.shipping\" container. Which layout XML strategy is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use <move> to reorder the shipping-address block before shipping-methods, then use <referenceContainer> to insert the banner block with before=\"shipping-methods\""
+      },
+      {
+        "id": "B",
+        "text": "Use <referenceBlock> with remove=\"true\" on both blocks, then re-declare them in the desired order inside a new container"
+      },
+      {
+        "id": "C",
+        "text": "Create a preference for the Shipping block class and override the template to include the banner inline"
+      },
+      {
+        "id": "D",
+        "text": "Use <referenceBlock> on shipping-address with before=\"-\" and add the banner block using <referenceContainer> with after=\"shipping-address\""
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "Layout XML provides the <move> instruction specifically for reordering blocks within or across containers, and <referenceContainer> with positional attributes for precise block placement.\n\nWhy A is correct:\nThe <move> element repositions an existing block to a new location or changes its order within the same container without removing and re-declaring it. Using <referenceContainer name=\"checkout.steps.shipping\"> with a new block declaration and before=\"shipping-methods\" places the banner exactly between the two blocks. This is the cleanest, most maintainable approach.\n\nWhy B is incorrect:\nUsing remove=\"true\" (or display=\"false\") destroys blocks entirely — they lose all child blocks, arguments, and configurations. Re-declaring them means manually reproducing all nested structure, which is extremely fragile and breaks when other modules add children to those blocks.\n\nWhy C is incorrect:\nCreating a preference for the block class just to change element order violates separation of concerns. Layout structure belongs in layout XML, not in PHP class overrides. This also makes the change invisible to other layout customizations.\n\nWhy D is incorrect:\nThe before=\"-\" attribute means \"place before all other siblings,\" which would reorder the shipping-address block correctly. However, using after=\"shipping-address\" on the banner only works if both elements are direct children of the same container AND the rendering respects these attributes. The combination works but <move> (option A) is the canonical, documented approach for reordering existing blocks and is more explicit about intent.",
+    "codeExample": "<!-- checkout_index_index.xml (theme or module layout) -->\n<page xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n      xsi:noNamespaceSchemaLocation=\"urn:magento:framework:View/Layout/etc/page_configuration.xsd\">\n    <body>\n        <!-- Step 1: Move shipping-address before shipping-methods -->\n        <move element=\"checkout.steps.shipping.address\"\n              destination=\"checkout.steps.shipping\"\n              before=\"checkout.steps.shipping.methods\" />\n\n        <!-- Step 2: Insert banner between them -->\n        <referenceContainer name=\"checkout.steps.shipping\">\n            <block class=\"Vendor\\Module\\Block\\PromoBanner\"\n                   name=\"checkout.shipping.promo.banner\"\n                   template=\"Vendor_Module::promo-banner.phtml\"\n                   after=\"checkout.steps.shipping.address\"\n                   before=\"checkout.steps.shipping.methods\" />\n        </referenceContainer>\n    </body>\n</page>"
+  },
+  {
+    "id": 158,
+    "category": "Customization Architecture",
+    "difficulty": "Hard",
+    "question": "A project requires customizing the minicart's item renderer to add a \"delivery estimate\" field. The minicart uses a Knockout.js UI component defined in checkout_cart_sidebar_item_renderers.xml. The Architect must ensure the customization survives upgrades and doesn't conflict with other modules modifying the same renderer. Which two approaches together form the best solution?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create a RequireJS mixin for the minicart item renderer JS component to extend its data model with the delivery estimate"
+      },
+      {
+        "id": "B",
+        "text": "Override the entire minicart item renderer .html Knockout template in the custom theme"
+      },
+      {
+        "id": "C",
+        "text": "Use layout XML to add a jsLayout argument that extends the item renderer's component configuration with the new field"
+      },
+      {
+        "id": "D",
+        "text": "Create a full JS component override via requirejs-config.js map to replace the original renderer"
+      },
+      {
+        "id": "E",
+        "text": "Use a plugin on the cart totals data provider to inject delivery estimate data into the customer section data"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "E"
+    ],
+    "explanation": "Adding a field to a Knockout UI component requires both a data source (backend) and a UI extension (frontend) — a mixin for the JS component and a plugin for the data provider.\n\nWhy A is correct:\nRequireJS mixins extend existing JS components without replacing them. Multiple modules can define mixins on the same component, and they compose cleanly. The mixin can add the delivery estimate to the component's observable data model and template binding, making it available for rendering.\n\nWhy E is correct:\nThe minicart data comes from customer section data (customer-data JS module) loaded via the /customer/section/load endpoint. A plugin on the SectionPool or the specific cart data provider allows injecting the delivery estimate into the JSON payload that feeds the Knockout component. Without the backend data source, the frontend mixin has nothing to display.\n\nWhy B is incorrect:\nOverriding the entire Knockout template in a theme works but is fragile — any core update to the template requires manual re-merging. It also conflicts with other modules that modify the same template. Template overrides should be the last resort for UI components.\n\nWhy C is incorrect:\nLayout XML jsLayout arguments can configure component options, but they cannot inject new data fields into the component's data model. The delivery estimate requires runtime data from the backend, which layout XML cannot provide.\n\nWhy D is incorrect:\nFull component replacement via requirejs-config.js map overwrites the entire component, preventing other modules' mixins from applying. This is the most conflict-prone approach and defeats the purpose of Magento's mixin system.",
+    "codeExample": "// requirejs-config.js (mixin registration)\nvar config = {\n    config: {\n        mixins: {\n            'Magento_Checkout/js/view/minicart': {\n                'Vendor_Module/js/view/minicart-mixin': true\n            }\n        }\n    }\n};\n\n// minicart-mixin.js\ndefine(['mage/utils/wrapper'], function (wrapper) {\n    'use strict';\n    return function (Component) {\n        return Component.extend({\n            getDeliveryEstimate: function (itemId) {\n                var itemData = this.getItemData(itemId);\n                return itemData.delivery_estimate || '';\n            }\n        });\n    };\n});\n\n// Plugin: inject data into cart section\npublic function afterGetSectionData(\n    \\Magento\\Checkout\\CustomerData\\Cart $subject,\n    array $result\n): array {\n    foreach ($result['items'] as &$item) {\n        $item['delivery_estimate'] = $this->estimator->getEstimate($item['product_id']);\n    }\n    return $result;\n}"
+  },
+  {
+    "id": 159,
+    "category": "Customization Architecture",
+    "difficulty": "Medium",
+    "question": "A module exposes a service contract \\Vendor\\Shipping\\Api\\CarrierRateRepositoryInterface::getList(). A new business requirement needs an additional \"estimated_delivery_date\" field in the response DTO without breaking existing API consumers. Which approach preserves backward compatibility?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Add the new getter/setter to the existing Data Interface and update the implementation class"
+      },
+      {
+        "id": "B",
+        "text": "Define an extension attribute on the Data Interface via extension_attributes.xml and populate it with a plugin"
+      },
+      {
+        "id": "C",
+        "text": "Create a new version of the API endpoint (V2) with the additional field in the DTO"
+      },
+      {
+        "id": "D",
+        "text": "Add the field as a custom attribute using the CustomAttributesDataInterface"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "Extension attributes are Magento's mechanism for extending service contract DTOs without breaking backward compatibility.\n\nWhy B is correct:\nExtension attributes are defined in extension_attributes.xml and generate an ExtensionInterface with the new getter/setter. Existing API consumers that don't know about the new field simply ignore it — their deserialization continues to work. The field is populated via a plugin on the repository, keeping the original interface untouched. This is the canonical Magento approach for extending APIs.\n\nWhy A is incorrect:\nAdding methods to an existing Data Interface is a backward-incompatible change. Any third-party code implementing that interface will break because it doesn't have the new methods. In semantic versioning, this constitutes a breaking change requiring a major version bump.\n\nWhy C is incorrect:\nAPI versioning is overkill for adding a single optional field. Magento's extension attributes system exists precisely to avoid version proliferation. V2 endpoints also require maintaining two codepaths, increasing complexity.\n\nWhy D is incorrect:\nCustomAttributesDataInterface is designed for EAV-based entities (products, customers) where attributes are dynamic. For service contract DTOs that represent non-EAV data, custom attributes add unnecessary complexity and lack type safety. Extension attributes provide typed accessors and are the correct pattern for service contracts.",
+    "codeExample": "<!-- extension_attributes.xml -->\n<config>\n    <extension_attributes for=\"Vendor\\Shipping\\Api\\Data\\CarrierRateInterface\">\n        <attribute code=\"estimated_delivery_date\" type=\"string\" />\n    </extension_attributes>\n</config>\n\n// Plugin on repository to populate the extension attribute\npublic function afterGetList(\n    CarrierRateRepositoryInterface $subject,\n    CarrierRateSearchResultsInterface $results\n): CarrierRateSearchResultsInterface {\n    foreach ($results->getItems() as $rate) {\n        $extensionAttributes = $rate->getExtensionAttributes();\n        $extensionAttributes->setEstimatedDeliveryDate(\n            $this->deliveryCalculator->calculate($rate)\n        );\n        $rate->setExtensionAttributes($extensionAttributes);\n    }\n    return $results;\n}"
+  },
+  {
+    "id": 160,
+    "category": "Customization Architecture",
+    "difficulty": "Hard",
+    "question": "An Architect is integrating a custom ERP module (Vendor_Erp) that requires catalog product data and customer group pricing. The module must work whether or not the optional Magento_TierPricing module is installed. Which module dependency configuration is correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Declare Magento_Catalog as a hard dependency in module.xml <sequence> and Magento_TierPricing as a hard dependency with a try/catch in the constructor"
+      },
+      {
+        "id": "B",
+        "text": "Declare both Magento_Catalog and Magento_TierPricing in module.xml <sequence> and use <preference> in di.xml to provide a null implementation when TierPricing is absent"
+      },
+      {
+        "id": "C",
+        "text": "Declare Magento_Catalog in module.xml <sequence> for load order, require it in composer.json, and list Magento_TierPricing only in composer.json as \"suggest\" with a proxy/factory pattern for its classes"
+      },
+      {
+        "id": "D",
+        "text": "Declare both modules in composer.json \"require\" and use module.xml <sequence> only for Magento_Catalog, letting Magento auto-resolve TierPricing load order"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "Magento 2 distinguishes between hard dependencies (module cannot function without them) and soft dependencies (module has enhanced functionality when present). These are managed through two complementary systems: composer.json for installation and module.xml for load order.\n\nWhy C is correct:\nMagento_Catalog is a hard dependency — the ERP module cannot function without products. It goes in both composer.json \"require\" (ensures installation) and module.xml <sequence> (ensures load order). Magento_TierPricing is a soft dependency — it's optional. Listing it in composer.json \"suggest\" documents the optional relationship without enforcing installation. Using proxy classes or factories for TierPricing classes prevents fatal errors when the module is absent — the ObjectManager can handle missing classes gracefully through proxy patterns.\n\nWhy A is incorrect:\nDeclaring TierPricing in <sequence> creates a hard load-order dependency. If TierPricing is not installed, Magento will throw a setup exception because a sequenced module is missing. Try/catch in the constructor doesn't help because the DI container will fail to resolve the class before the constructor even runs.\n\nWhy B is incorrect:\nListing TierPricing in <sequence> again creates a hard dependency — module.xml <sequence> entries must be installed modules. The preference approach for a null implementation is creative but unnecessary complexity when proxy/factory patterns handle missing modules natively.\n\nWhy D is incorrect:\nPutting Magento_TierPricing in composer.json \"require\" makes it a mandatory installation dependency, meaning the ERP module cannot be installed without TierPricing. This directly contradicts the requirement that TierPricing is optional.",
+    "codeExample": "<!-- module.xml: Hard dependency only -->\n<config>\n    <module name=\"Vendor_Erp\" setup_version=\"1.0.0\">\n        <sequence>\n            <module name=\"Magento_Catalog\" />\n            <!-- TierPricing NOT listed: soft dependency -->\n        </sequence>\n    </module>\n</config>\n\n// composer.json\n{\n    \"require\": {\n        \"magento/module-catalog\": \"^103.0\"\n    },\n    \"suggest\": {\n        \"magento/module-tier-pricing\": \"Enables customer group pricing in ERP sync\"\n    }\n}\n\n// Soft dependency usage via proxy\npublic function __construct(\n    ProductRepositoryInterface $productRepository,\n    ?TierPriceManagementInterface $tierPriceManagement = null\n) {\n    $this->productRepository = $productRepository;\n    $this->tierPriceManagement = $tierPriceManagement;\n}\n\npublic function syncProduct(int $productId): array\n{\n    $product = $this->productRepository->getById($productId);\n    $data = ['sku' => $product->getSku()];\n\n    // Graceful degradation when TierPricing absent\n    if ($this->tierPriceManagement !== null) {\n        $data['tier_prices'] = $this->tierPriceManagement->getList($product->getSku());\n    }\n    return $data;\n}"
+  },
+  {
+    "id": 161,
+    "category": "Multi-site Architecture",
+    "difficulty": "Medium",
+    "question": "A merchant wants to sell identical products in the US and Canada with different prices, tax rules, and payment methods, but wants a single admin catalog. What is the correct architectural approach?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create two Store Views under one Website, using different locales for each country"
+      },
+      {
+        "id": "B",
+        "text": "Create two separate Websites, each with its own Store and Store View, sharing products via the Global scope catalog"
+      },
+      {
+        "id": "C",
+        "text": "Create two Stores under one Website with separate category trees for each country"
+      },
+      {
+        "id": "D",
+        "text": "Use a single Website with a single Store View and handle all differences via customer group pricing"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because separate Websites are required when you need different base currencies, tax configurations, or payment methods — these are all Website-scoped configurations in Magento 2. Products assigned to the Global scope are automatically available across both Websites, giving the merchant a single catalog to manage while allowing per-Website pricing, tax rules, and payment methods.\n\nA is wrong because Store Views exist under a Store within a Website, and they only control language/locale/translations. Tax rules, payment methods, and base currency are Website-scoped and cannot differ between Store Views in the same Website.\n\nC is wrong because multiple Stores under one Website share the same Website-scoped configuration (tax, payment, base currency). While separate Stores allow different category trees, they cannot solve the requirement for different tax rules and payment methods per country.\n\nD is wrong because customer group pricing does not address tax configuration or payment method differences, which are Website-scoped. This approach would also create a poor customer experience with no clear separation between country-specific storefronts.",
+    "codeExample": ""
+  },
+  {
+    "id": 162,
+    "category": "Multi-site Architecture",
+    "difficulty": "Hard",
+    "question": "A retailer operates storefronts in the US (USD), Germany (EUR), and Japan (JPY). Each storefront has its own base currency. During catalog price indexing, the merchant notices that cross-currency price comparisons in layered navigation are inaccurate. What is the root cause and correct solution?",
+    "options": [
+      {
+        "id": "A",
+        "text": "The currency rate table is outdated; configure a scheduled cron job using the Fixer.io API to update rates, then trigger a full price reindex"
+      },
+      {
+        "id": "B",
+        "text": "Layered navigation always uses the default Website's base currency for price ranges; override the price indexer to normalize all prices to a single reference currency"
+      },
+      {
+        "id": "C",
+        "text": "Each Website has its own base currency and price index; layered navigation price ranges are built per-Website scope, so cross-currency comparison is not a valid use case — the issue is likely that products are missing Website-specific prices and falling back to default scope"
+      },
+      {
+        "id": "D",
+        "text": "Enable the 'Display Prices in Both Currencies' option in the catalog configuration so customers can compare prices across currencies"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct because Magento 2's price indexer builds separate price index entries per Website. Each Website's layered navigation uses its own base currency for price range buckets. There is no built-in cross-currency price comparison in layered navigation. When prices appear 'inaccurate,' it's typically because products lack Website-specific prices and fall back to the default scope price (which is in a different currency), causing mismatched values in the index.\n\nA is wrong because while keeping currency rates updated is good practice, rates are used for display currency conversion (converting base currency to allowed display currencies within the same Website). Updating rates does not fix the fundamental issue of products missing Website-specific base prices.\n\nB is wrong because the price indexer does not normalize prices across Websites to a single currency. Overriding the indexer this way would be a custom, non-standard approach that fights the platform's multi-Website architecture rather than using it correctly.\n\nD is wrong because there is no such native configuration option. Display currency conversion shows prices in alternate currencies within the same storefront, but does not enable cross-Website price comparison in layered navigation.",
+    "codeExample": ""
+  },
+  {
+    "id": 163,
+    "category": "Multi-site Architecture",
+    "difficulty": "Medium",
+    "question": "A company needs to launch a Magento 2 store in French and German for the European market. Both languages sell the same products at the same prices with the same payment and shipping methods. Product descriptions and CMS content must be translated. What is the most efficient architecture?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create two separate Websites — one for French and one for German — each with translated content"
+      },
+      {
+        "id": "B",
+        "text": "Create one Website with one Store and two Store Views (fr_FR and de_DE), using Store View-scoped attributes for translated product content and inline translation for static strings"
+      },
+      {
+        "id": "C",
+        "text": "Create one Website with two Stores, each having one Store View, and duplicate the entire catalog for each language"
+      },
+      {
+        "id": "D",
+        "text": "Create one Website with one Store View and use a JavaScript-based translation layer on the frontend to dynamically translate all content"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because Store Views are specifically designed for language/locale variations within the same store. When prices, payment methods, shipping, tax rules, and catalog structure are identical, there is no reason to create separate Websites or Stores. Store View-scoped product attributes (name, description, meta fields) hold translations. CSV translation files and inline translation handle static UI strings. This is the most efficient approach — one catalog, one set of rules, minimal duplication.\n\nA is wrong because separate Websites are unnecessary overhead when pricing, tax, payment, and shipping are identical. Websites are for scenarios requiring different base currencies, tax rules, or payment configurations. Using Websites for language-only differences duplicates configuration and complicates catalog management.\n\nC is wrong because separate Stores are used when you need different category tree structures (root categories). If the same products are sold with the same navigation, duplicating the catalog across two Stores is wasteful and creates a maintenance burden with no architectural benefit.\n\nD is wrong because client-side translation is not a Magento pattern, does not integrate with the CMS or product attribute system, causes SEO problems (search engines see untranslated content), and creates a poor user experience with potential flash-of-untranslated-content issues.",
+    "codeExample": "<!-- i18n CSV file: app/design/frontend/Vendor/theme/i18n/de_DE.csv -->\n\"Add to Cart\",\"In den Warenkorb\"\n\"Search\",\"Suche\"\n\"My Account\",\"Mein Konto\"\n\n<!-- Store View scope for product attributes in catalog_product_entity_varchar -->\n<!-- attribute_id=73 (name), store_id=2 (de_DE Store View) -->\n<!-- value = 'Herren Laufschuhe' instead of 'Men Running Shoes' -->"
+  },
+  {
+    "id": 164,
+    "category": "Multi-site Architecture",
+    "difficulty": "Hard",
+    "question": "An enterprise merchant has three brands that share some products but each brand has unique products and a distinct category tree. Certain products must appear in multiple brand catalogs with brand-specific pricing. What architecture correctly supports these requirements? (Choose 2)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create one Website with three Stores, each having its own root category, and assign shared products to all three Websites via the product's 'Product in Websites' setting"
+      },
+      {
+        "id": "B",
+        "text": "Create three separate Websites, each with its own Store, and assign shared products to multiple Websites — use Website-scoped pricing for brand-specific prices"
+      },
+      {
+        "id": "C",
+        "text": "Create one Website with one Store, use customer groups to show different category trees and prices per brand"
+      },
+      {
+        "id": "D",
+        "text": "Create three Stores under one Website with different root categories for distinct category trees, then use catalog price rules with Store View scope for brand-specific pricing"
+      },
+      {
+        "id": "E",
+        "text": "Create three separate Websites, each with its own Store and root category, assign shared products to all three Websites, and configure per-Website prices on the product's Advanced Pricing settings"
+      }
+    ],
+    "correctAnswers": [
+      "B",
+      "E"
+    ],
+    "explanation": "B and E are both correct and describe the same architecture with different levels of detail. Three separate Websites are needed because each brand requires distinct pricing (price is Website-scoped in Magento 2). Each Website's Store gets its own root category, enabling distinct category trees per brand. Shared products are assigned to multiple Websites via the 'Product in Websites' checkbox, and Website-scoped pricing allows each brand to set its own price for the same product.\n\nA is wrong because it describes three Stores under one Website but then references assigning products to 'all three Websites' — there is only one Website in this scenario. More critically, under a single Website all Stores share the same base price (price is Website-scoped), so brand-specific pricing is impossible without separate Websites.\n\nC is wrong because customer groups cannot control which category tree a customer sees. Root categories and category tree structure are Store-level configurations. Customer group pricing exists but does not solve the distinct category tree requirement.\n\nD is wrong because catalog price rules are not Store View-scoped in native Magento 2 — they are Website-scoped. Even if they were, using price rules as a substitute for proper Website-scoped base pricing would be fragile and difficult to maintain. Under one Website, the base price is shared across all Stores, so price rules would be workarounds rather than proper architecture.",
+    "codeExample": ""
+  },
+  {
+    "id": 165,
+    "category": "Multi-site Architecture",
+    "difficulty": "Hard",
+    "question": "A merchant runs three Magento 2 storefronts on separate domains (brand-a.com, brand-b.com, brand-c.com) behind Varnish. The Nginx configuration must route each domain to the correct Magento Website code. Which configuration approach correctly handles this?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Set the MAGE_RUN_CODE and MAGE_RUN_TYPE environment variables in the Nginx server block per domain using a map directive, and pass them to PHP-FPM via fastcgi_param"
+      },
+      {
+        "id": "B",
+        "text": "Configure separate Magento installations for each domain and use Nginx upstream blocks to proxy each domain to its own application instance"
+      },
+      {
+        "id": "C",
+        "text": "Use Magento's Admin > Stores > Configuration > Web > Base URLs to set the domain per Store View, relying on Magento's internal routing to match the incoming domain automatically"
+      },
+      {
+        "id": "D",
+        "text": "Set the store code in the URL path (brand-a.com/store_a/) and enable 'Add Store Code to URLs' in the admin configuration for each Store View"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct because the standard approach for multi-domain Magento 2 deployments is to use Nginx's map directive to associate each incoming server_name (domain) with the correct MAGE_RUN_CODE (Website code) and MAGE_RUN_TYPE (set to 'website'). These are passed to PHP-FPM as fastcgi_param values, telling Magento which Website configuration to load. When Varnish sits in front, the X-Forwarded-Host header or a similar mechanism passes the original domain through so Nginx can still resolve the correct Website code.\n\nB is wrong because running separate Magento installations defeats the purpose of multi-Website architecture. The entire benefit of Magento's Website/Store/Store View hierarchy is sharing a single codebase, admin panel, and database across multiple storefronts. Separate installations multiply maintenance, deployment complexity, and infrastructure costs.\n\nC is wrong because while setting Base URLs is necessary for Magento to generate correct links, it does not handle the initial routing of incoming requests. Magento does not inspect the incoming HTTP Host header and automatically select the correct Website. The web server must explicitly tell Magento which Website to load via MAGE_RUN_CODE before the application bootstraps.\n\nD is wrong because adding store codes to URLs (brand-a.com/store_a/) is a Store View-level feature, not a Website routing mechanism. It does not solve multi-domain routing — all domains would still need proper server-level configuration. Additionally, store codes in URLs are generally undesirable for branding and SEO on separate domains.",
+    "codeExample": "# Nginx configuration for multi-domain Magento 2\n\nmap $http_host $MAGE_RUN_CODE {\n    brand-a.com   brand_a;\n    brand-b.com   brand_b;\n    brand-c.com   brand_c;\n}\n\nmap $http_host $MAGE_RUN_TYPE {\n    default   website;\n}\n\nserver {\n    listen 80;\n    server_name brand-a.com brand-b.com brand-c.com;\n    set $MAGE_ROOT /var/www/magento;\n\n    location ~ \\.php$ {\n        fastcgi_pass   unix:/run/php-fpm/magento.sock;\n        fastcgi_param  MAGE_RUN_CODE $MAGE_RUN_CODE;\n        fastcgi_param  MAGE_RUN_TYPE $MAGE_RUN_TYPE;\n        include        fastcgi_params;\n        fastcgi_param  SCRIPT_FILENAME $MAGE_ROOT/pub/index.php;\n    }\n}"
+  },
+  {
+    "id": 166,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Hard",
+    "question": "A merchant with 50,000 products and 12 customer groups reports that catalog pages load slowly after price rule changes. Investigation reveals the catalog_product_index_price table rebuild takes over 40 minutes. The merchant uses tier prices, special prices, and catalog price rules extensively. Which architectural approach best addresses this price indexing bottleneck?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Replace the default price indexer with a custom indexer that writes directly to the flat catalog tables, bypassing catalog_product_index_price entirely"
+      },
+      {
+        "id": "B",
+        "text": "Implement a custom price indexer dimension that partitions the catalog_product_index_price table by customer group, enabling parallel indexing per group"
+      },
+      {
+        "id": "C",
+        "text": "Disable the price indexer and calculate all prices at runtime using a plugin on \\Magento\\Catalog\\Pricing\\Price\\FinalPrice, caching results in Redis"
+      },
+      {
+        "id": "D",
+        "text": "Reduce customer groups to 3 and merge tier pricing rules to decrease the number of rows generated per product in the index table"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: Magento 2.3+ introduced indexer dimensions (introduced via the Indexer\\DimensionProviderInterface) specifically to address price indexing at scale. By partitioning catalog_product_index_price by customer group, each group's prices can be rebuilt independently and in parallel, dramatically reducing total reindex time. The architecture creates separate temporary tables per dimension, processes them concurrently, then swaps them into the main table.\n\nA is wrong: The flat catalog tables depend on catalog_product_index_price for their price columns. Bypassing it would leave flat tables with stale or missing price data and break collection filtering by price.\n\nC is wrong: Runtime price calculation for 50,000 products would create severe performance problems on category and search result pages where dozens of products must display prices simultaneously. Even with Redis caching, cache warming and invalidation at this scale would be more complex than proper indexing.\n\nD is wrong: While reducing customer groups would decrease index rows (rows = products × groups), this is a business constraint workaround rather than an architectural solution. It forces the merchant to sacrifice legitimate pricing segmentation and doesn't address the root indexing architecture problem.",
+    "codeExample": "<!-- di.xml: Configure price indexer dimensions by customer group -->\n<type name=\"Magento\\Catalog\\Model\\Indexer\\Product\\Price\\DimensionCollectionFactory\">\n    <arguments>\n        <argument name=\"dimensionProviders\" xsi:type=\"array\">\n            <item name=\"customer_group\" xsi:type=\"string\">\n                Magento\\Customer\\Model\\Indexer\\CustomerGroupDimensionProvider\n            </item>\n        </argument>\n    </arguments>\n</type>\n\n<!-- indexer.xml: Enable dimensions for price indexer -->\n<indexer id=\"catalog_product_price\"\n         class=\"Magento\\Catalog\\Model\\Indexer\\Product\\Price\"\n         view_id=\"catalog_product_price\">\n    <dimensions>\n        <dimension name=\"customer_group\"\n                   provider=\"Magento\\Customer\\Model\\Indexer\\CustomerGroupDimensionProvider\" />\n    </dimensions>\n</indexer>"
+  },
+  {
+    "id": 167,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Medium",
+    "question": "A product has a regular price of $100, a special price of $85 (currently active), a tier price of $80 for qty 5+ for the General customer group, and an active catalog price rule giving 10% off. What final price does Magento display for a General group customer viewing the product detail page (qty 1)?",
+    "options": [
+      {
+        "id": "A",
+        "text": "$76.50 — the catalog rule applies 10% off the special price of $85"
+      },
+      {
+        "id": "B",
+        "text": "$80 — the tier price takes highest priority over all other price types"
+      },
+      {
+        "id": "C",
+        "text": "$85 — the special price is used, and the catalog rule discount is not applied on top of it"
+      },
+      {
+        "id": "D",
+        "text": "$90 — the catalog rule applies 10% off the regular price, ignoring the special price"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct: Magento's price resolution calculates the final price by first determining the minimum between regular price and special price (min($100, $85) = $85), then applying catalog price rules on top of that resolved price. A 10% discount on $85 = $76.50. Tier prices are only considered when the quantity threshold is met, so at qty 1, the tier price of $80 for qty 5+ does not apply.\n\nB is wrong: Tier prices are quantity-dependent. The tier price of $80 only activates when the customer adds 5 or more units. At qty 1 on the product detail page, tier pricing is not in effect.\n\nC is wrong: Catalog price rules DO apply on top of the special price. The special price replaces the regular price as the base for further discounts. Magento's FinalPrice calculation applies catalog rules after resolving the special price, not instead of it.\n\nD is wrong: Catalog price rules apply to the final resolved price, not exclusively to the regular price. Since the special price ($85) is lower than the regular price ($100), $85 becomes the base price on which the catalog rule percentage is calculated.",
+    "codeExample": ""
+  },
+  {
+    "id": 168,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Hard",
+    "question": "A B2B merchant needs a \"negotiated price\" that overrides all other pricing (special prices, tier prices, catalog rules) for specific customer-product combinations stored in a custom table. The negotiated price must appear in category listings, search results, and layered navigation price filtering. Which implementation approach is architecturally correct?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create a plugin on \\Magento\\Catalog\\Pricing\\Price\\FinalPrice::getValue() that checks the custom table and returns the negotiated price when found"
+      },
+      {
+        "id": "B",
+        "text": "Create a custom price indexer plugin on \\Magento\\Catalog\\Model\\ResourceModel\\Product\\Indexer\\Price\\Query\\BaseFinalPrice that joins the negotiated price table and overrides the min_price/final_price columns in the index"
+      },
+      {
+        "id": "C",
+        "text": "Use an observer on catalog_product_get_final_price to set the negotiated price on the product model before any other price calculation occurs"
+      },
+      {
+        "id": "D",
+        "text": "Store negotiated prices as customer-group-specific special prices using the existing special_price attribute and create one customer group per negotiation"
+      },
+      {
+        "id": "E",
+        "text": "Create a custom PriceBox block that renders the negotiated price on the frontend while leaving the actual price model and index untouched"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: For negotiated prices to work in category listings, search results, and layered navigation price filtering, the prices MUST be present in the price index (catalog_product_index_price). Layered navigation and collection sorting/filtering read from the index, not from runtime price calculation. By modifying the price indexer query via a plugin on BaseFinalPrice, the negotiated prices are written into min_price and final_price columns, making them available everywhere the index is consumed.\n\nA is wrong: A plugin on FinalPrice::getValue() only affects runtime price calculation on product detail pages and when individual product prices are resolved. It does NOT affect the price index, so category page price filtering via layered navigation would show incorrect price ranges, and sorted-by-price listings would use the non-negotiated indexed price.\n\nC is wrong: The catalog_product_get_final_price event similarly only fires during runtime price resolution, not during indexing. Layered navigation and collection price filters would still use the unmodified indexed prices.\n\nD is wrong: Creating a customer group per negotiation is not scalable for B2B. A merchant with 500 customers each having unique negotiated prices would need 500 customer groups, which multiplies price index rows (products × groups) and makes group management unworkable.\n\nE is wrong: A custom PriceBox only changes the visual rendering. The actual price used for cart calculations, layered navigation filtering, and price sorting would remain the standard price. This creates a dangerous disconnect between displayed and actual prices.",
+    "codeExample": "<?php\nnamespace Vendor\\NegotiatedPrice\\Plugin;\n\nuse Magento\\Catalog\\Model\\ResourceModel\\Product\\Indexer\\Price\\Query\\BaseFinalPrice;\nuse Magento\\Framework\\DB\\Select;\n\nclass ModifyPriceIndexQuery\n{\n    public function afterGetQuery(\n        BaseFinalPrice $subject,\n        Select $select\n    ): Select {\n        // Join negotiated_price table into the price index query\n        $select->joinLeft(\n            ['np' => 'negotiated_price'],\n            'np.product_id = e.entity_id AND np.customer_group_id = cg.customer_group_id',\n            []\n        );\n\n        // Override final_price and min_price when negotiated price exists\n        $connection = $select->getConnection();\n        $columns = $select->getPart(Select::COLUMNS);\n\n        // Use IFNULL to fall back to standard price when no negotiation exists\n        $select->columns([\n            'final_price' => $connection->getIfNullSql(\n                'np.negotiated_price',\n                'price_index.final_price'\n            ),\n            'min_price' => $connection->getIfNullSql(\n                'np.negotiated_price',\n                'price_index.min_price'\n            ),\n        ]);\n\n        return $select;\n    }\n}"
+  },
+  {
+    "id": 169,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Medium",
+    "question": "A merchant sells industrial equipment where each product requires customers to select a warranty duration (1, 3, or 5 years), an installation service (basic or premium), and optional add-on components from a predefined list. Each combination affects the final price. An architect must choose the right product type. Which approach is most appropriate?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create a custom product type with its own price model to handle the warranty/service/add-on pricing matrix"
+      },
+      {
+        "id": "B",
+        "text": "Use a bundle product with fixed bundle options for warranty and installation, and a multi-select option for add-on components"
+      },
+      {
+        "id": "C",
+        "text": "Use a configurable product with super attributes for warranty duration and installation type, plus custom options for add-ons"
+      },
+      {
+        "id": "D",
+        "text": "Use a simple product with custom options for all three selections and calculate the price via a plugin on the custom option price model"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct: Bundle products are designed exactly for this use case — composing a final product from multiple required and optional selections, each contributing to the total price. Warranty duration maps to a fixed radio/dropdown bundle option with 3 choices (each priced differently). Installation service maps to another fixed bundle option with 2 choices. Add-on components map to a multi-select or checkbox bundle option. Bundle products handle the price aggregation natively, display correctly in cart/checkout, and are fully supported by the price indexer.\n\nA is wrong: Creating a custom product type is significant over-engineering for this scenario. Custom product types require implementing TypeInterface, a custom price model, stock handling, quote/order item handling, and custom admin UI. This is only justified when no existing type can model the product's fundamental behavior (e.g., subscriptions, digital licenses with unique fulfillment). The bundle type already handles this composition pattern.\n\nC is wrong: Configurable products create child simple products for each attribute combination. Warranty (3 values) × Installation (2 values) = 6 child SKUs per equipment product, and add-ons cannot be modeled as super attributes because they are multi-select. This forces a hybrid approach that is harder to maintain and doesn't leverage Magento's built-in composition pricing.\n\nD is wrong: Custom options on simple products work for basic cases but lack the structured pricing, inventory awareness, and reporting capabilities of bundle items. Custom options are flat — they don't support the hierarchical selection model needed here, and the price calculation would require custom plugin logic that duplicates what the bundle product type already provides.",
+    "codeExample": ""
+  },
+  {
+    "id": 170,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Hard",
+    "question": "A large merchant with 200+ categories (tree depth of 6 levels) and 80,000 products reports that category pages for anchor categories at level 2 load in 8+ seconds. Flat catalog is enabled. Analysis shows the category_product index is current, but MySQL queries joining catalog_category_product_index with catalog_product_entity_int for layered navigation filters are slow. Which combination of architectural changes will most effectively improve performance?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Increase MySQL query cache size and add composite indexes on catalog_category_product_index covering (category_id, product_id, position)"
+      },
+      {
+        "id": "B",
+        "text": "Disable flat catalog entirely and rely on EAV with Elasticsearch for all frontend catalog queries, since Elasticsearch handles filtering and sorting independently of MySQL index tables"
+      },
+      {
+        "id": "C",
+        "text": "Disable anchor categories at level 2 so they only show directly assigned products, reducing the category-product index row count, and implement faceted navigation via Elasticsearch"
+      },
+      {
+        "id": "D",
+        "text": "Keep flat catalog for product listing data but migrate layered navigation and filtering to Elasticsearch, and optimize anchor category depth so high-level anchors resolve fewer descendant categories"
+      },
+      {
+        "id": "E",
+        "text": "Replace SQLite-based indexing with a custom Redis-backed category-product mapping for faster lookups during category page rendering"
+      }
+    ],
+    "correctAnswers": [
+      "D"
+    ],
+    "explanation": "D is correct: This is the optimal hybrid approach. Flat catalog tables remain valuable for fast product attribute retrieval in listings (avoiding EAV joins for display attributes). However, layered navigation filtering — which is the actual bottleneck when joining category_product_index with attribute index tables — should be delegated to Elasticsearch, which handles faceted filtering natively without MySQL joins. Additionally, reviewing anchor category depth is important: a level-2 anchor category in a 6-level tree aggregates products from all descendant categories, potentially creating hundreds of thousands of rows in the category-product index. Limiting anchor behavior or restructuring the tree reduces this multiplication.\n\nA is wrong: MySQL query cache was removed in MySQL 8.0 and is generally ineffective for dynamic e-commerce queries. The composite index suggested already exists by default on catalog_category_product_index. The problem is not missing indexes but the sheer volume of rows that anchor categories at high levels create — an index cannot fix a fundamentally large result set that must be joined with attribute tables.\n\nB is wrong: Disabling flat catalog entirely forces all product listing queries back to EAV, which requires multiple joins per attribute for display data (name, image, price, etc.). While Elasticsearch handles filtering well, the actual product data retrieval for rendering still hits MySQL, and EAV queries for 40+ products per page with 10+ display attributes are significantly slower than flat table reads.\n\nC is wrong: Disabling anchor categories at level 2 would break the merchant's expected catalog navigation behavior — customers browsing a top-level category expect to see all products within its subcategories. This is a fundamental UX requirement for most catalogs, not something that should be sacrificed for performance.\n\nE is wrong: Magento does not use SQLite for indexing — it uses MySQL/MariaDB. The suggestion is based on a incorrect premise. Furthermore, replacing the category-product index with Redis would require reimplementing the entire category product resolution, layered navigation, and price filtering logic, which is extreme over-engineering compared to leveraging Elasticsearch's existing faceted search capabilities.",
+    "codeExample": "<!-- catalog/search engine config: Use Elasticsearch for layered navigation -->\n<!-- env.php or admin: Stores > Config > Catalog > Catalog Search -->\n<!--\n  'system' => [\n      'default' => [\n          'catalog' => [\n              'search' => [\n                  'engine' => 'elasticsearch7',\n                  'elasticsearch7_server_hostname' => 'localhost',\n                  'elasticsearch7_server_port' => '9200'\n              ]\n          ]\n      ]\n  ]\n-->\n\n<?php\n// Verify anchor category product count to identify bloated index areas\nnamespace Vendor\\CatalogDiagnostic\\Console;\n\nuse Magento\\Catalog\\Model\\ResourceModel\\Category\\CollectionFactory;\nuse Magento\\Framework\\App\\ResourceConnection;\nuse Symfony\\Component\\Console\\Command\\Command;\nuse Symfony\\Component\\Console\\Input\\InputInterface;\nuse Symfony\\Component\\Console\\Output\\OutputInterface;\n\nclass AnchorCategoryAnalysis extends Command\n{\n    public function __construct(\n        private readonly ResourceConnection $resource,\n        private readonly CollectionFactory $categoryCollectionFactory\n    ) {\n        parent::__construct();\n    }\n\n    protected function execute(InputInterface $input, OutputInterface $output): int\n    {\n        $connection = $this->resource->getConnection();\n        $table = $this->resource->getTableName('catalog_category_product_index');\n\n        // Find categories with the most indexed product rows\n        $select = $connection->select()\n            ->from($table, ['category_id', 'product_count' => 'COUNT(*)'])\n            ->group('category_id')\n            ->order('product_count DESC')\n            ->limit(20);\n\n        $results = $connection->fetchAll($select);\n\n        foreach ($results as $row) {\n            $output->writeln(sprintf(\n                'Category %d: %d indexed products',\n                $row['category_id'],\n                $row['product_count']\n            ));\n        }\n\n        return Command::SUCCESS;\n    }\n}"
+  },
+  {
+    "id": 171,
+    "category": "B2B Features",
+    "difficulty": "Medium",
+    "question": "A client needs to model a corporate structure where a parent company has three regional divisions, each with their own purchasing departments and budget limits. Which approach correctly implements this in Adobe Commerce B2B?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create separate customer accounts for each division and link them via custom attributes"
+      },
+      {
+        "id": "B",
+        "text": "Use the Company Account hierarchy with a root company user, division-level admin users assigned to teams, and configure roles with resource-based permissions for each team"
+      },
+      {
+        "id": "C",
+        "text": "Create one company account and manage divisions through customer groups with shared pricing rules"
+      },
+      {
+        "id": "D",
+        "text": "Implement a custom module that extends the customer entity with parent-child relationships and budget tracking"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because Adobe Commerce B2B's Company Account feature natively supports hierarchical organizational structures through Teams (which represent divisions/departments) and Roles with granular resource permissions. The root company admin sits at the top, division admins manage their teams, and roles control what actions (placing orders, viewing quotes, managing users) each level can perform. This maps directly to the corporate structure requirement.\n\nA is wrong because separate customer accounts cannot share a company context — they would be isolated entities without a unified hierarchy, approval chain, or shared catalog access.\n\nC is wrong because customer groups are a B2C concept for pricing segmentation. They do not provide organizational hierarchy, team-based permissions, or the approval workflows needed for divisional purchasing control.\n\nD is wrong because building a custom parent-child customer system would duplicate the native Company Account functionality, adding unnecessary complexity and maintenance burden while losing integration with B2B features like purchase approvals, quotes, and shared catalogs.",
+    "codeExample": ""
+  },
+  {
+    "id": 172,
+    "category": "B2B Features",
+    "difficulty": "Hard",
+    "question": "An architect is designing catalog pricing for a B2B merchant who sells to 200+ companies. Most companies see standard pricing, but 15 strategic accounts need custom pricing on overlapping subsets of products. Some products appear in multiple custom catalogs with different prices. How should the shared catalog architecture be configured?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create one Public shared catalog with standard pricing and 15 Custom shared catalogs, each assigned to the respective company account. For products in multiple custom catalogs, each catalog maintains its own independent price."
+      },
+      {
+        "id": "B",
+        "text": "Create 15 tier-price rules using catalog price rules with customer group conditions, keeping all products in the default catalog"
+      },
+      {
+        "id": "C",
+        "text": "Create one Custom shared catalog and assign all 15 companies to it, using tier pricing within that single catalog to differentiate per-company prices"
+      },
+      {
+        "id": "D",
+        "text": "Bypass shared catalogs entirely and use cart price rules with company-specific coupon codes to achieve per-company pricing"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct because this is the intended Shared Catalog architecture. The Public catalog serves as the default for all companies without a custom assignment and controls product visibility and base pricing. Each Custom shared catalog can override prices on a per-product basis independently, so the same SKU can have $100 in Company X's catalog and $85 in Company Y's catalog. When a company is assigned a Custom catalog, they see only the products included in it at the custom prices. This scales to 15 catalogs and handles overlapping product sets with different prices naturally.\n\nB is wrong because catalog price rules apply discounts based on customer groups, not company accounts. They cannot provide the product visibility control that shared catalogs offer (hiding/showing specific products per company), and managing 15 different pricing structures through layered price rules becomes fragile and conflict-prone.\n\nC is wrong because a single Custom shared catalog cannot differentiate pricing between the 15 companies assigned to it — all companies on the same shared catalog see the same prices. You would need one Custom catalog per company to achieve per-company pricing.\n\nD is wrong because cart price rules with coupons are a promotional mechanism, not a B2B pricing architecture. They don't control product visibility, require customers to enter codes, can be shared/leaked between companies, and don't integrate with the B2B quote negotiation workflow.",
+    "codeExample": "// Programmatically assigning custom prices in a shared catalog\n/** @var \\Magento\\SharedCatalog\\Api\\SharedCatalogManagementInterface $sharedCatalogManagement */\n/** @var \\Magento\\SharedCatalog\\Api\\ProductManagementInterface $productManagement */\n\n// Get the custom shared catalog assigned to a company\n$sharedCatalog = $sharedCatalogManagement->getByCompanyId($companyId);\n\n// Assign products with custom pricing\n$productManagement->assignProducts($sharedCatalog->getId(), $productSkus);\n\n// Custom prices are set via tier price entries linked to the\n// customer group that the shared catalog creates internally\n/** @var \\Magento\\Catalog\\Api\\TierPriceStorageInterface $tierPriceStorage */\n$tierPrice = $this->tierPriceFactory->create();\n$tierPrice->setPrice(85.00);\n$tierPrice->setPriceType('fixed');\n$tierPrice->setCustomerGroup($sharedCatalog->getCustomerGroupId());\n$tierPrice->setQuantity(1);\n$tierPrice->setSku('WIDGET-100');\n$tierPriceStorage->update([$tierPrice]);"
+  },
+  {
+    "id": 173,
+    "category": "B2B Features",
+    "difficulty": "Hard",
+    "question": "A B2B merchant wants to optimize the reordering experience for warehouse managers who regularly place orders of 50-200 SKUs. The managers know their SKUs and quantities in advance, often from spreadsheets. Which combination of B2B features should the architect recommend? (Choose 2)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Quick Order form with CSV upload support, allowing managers to paste or upload SKU/quantity pairs and add all items to cart in one action"
+      },
+      {
+        "id": "B",
+        "text": "Requisition Lists that persist frequently ordered product collections, enabling one-click reorder of a saved list with quantity adjustments before adding to cart"
+      },
+      {
+        "id": "C",
+        "text": "A custom REST API integration that accepts a JSON payload of SKUs and quantities and programmatically creates orders, bypassing the storefront entirely"
+      },
+      {
+        "id": "D",
+        "text": "Configuring the native wishlist feature with multi-wishlist enabled so managers can save and reorder from categorized product collections"
+      },
+      {
+        "id": "E",
+        "text": "Building a custom module that watches a shared network folder for CSV files and auto-creates orders using the Magento order management API"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "B"
+    ],
+    "explanation": "A is correct because Quick Order is purpose-built for B2B buyers who know their SKUs. It provides a form where users can enter SKU/quantity pairs directly, paste from a spreadsheet, or upload a CSV file. For 50-200 line items from a spreadsheet, the CSV upload capability is the most efficient path — no browsing the catalog required.\n\nB is correct because Requisition Lists are persistent, reusable product collections designed for B2B repeat ordering. Warehouse managers can save their standard orders as named lists (e.g., \"Weekly Restock - Warehouse A\"), then reorder by selecting the list, adjusting quantities as needed, and adding everything to cart. This complements Quick Order for recurring vs. ad-hoc ordering patterns.\n\nC is wrong because building a custom API integration bypasses the storefront purchasing workflow, which means no approval rules are applied, no shared catalog pricing validation occurs in the buyer's context, and managers lose visibility into their order flow. It also requires custom development when native features already solve the problem.\n\nD is wrong because wishlists are a B2C feature designed for individual consumers saving products for future personal purchase. They lack B2B capabilities like company-level sharing, integration with purchase approval workflows, and the quantity-focused interface that Requisition Lists provide.\n\nE is wrong because an automated file-watch order creation system bypasses all B2B workflow controls — purchase approvals, budget validation, and shared catalog pricing enforcement. It introduces security risks from the file system integration and requires significant custom development for a problem that Quick Order's CSV upload already solves with proper governance.",
+    "codeExample": ""
+  },
+  {
+    "id": 174,
+    "category": "B2B Features",
+    "difficulty": "Hard",
+    "question": "A manufacturing client requires a multi-tier purchase approval system: orders under $500 are auto-approved, orders $500-$5,000 require department manager approval, and orders over $5,000 require both department manager and VP approval in sequence. If any approver rejects, the order is cancelled. How should this be architected using Adobe Commerce B2B?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create three approval rules at the company level: one auto-approve rule for <$500, one rule requiring the Manager role for $500-$5,000, and one rule requiring both Manager and VP roles for >$5,000, relying on the native sequential approval chain"
+      },
+      {
+        "id": "B",
+        "text": "Configure two purchase order approval rules scoped to the company: Rule 1 requires 'Manager' role approval for orders ≥$500, Rule 2 requires 'VP' role approval for orders >$5,000. Orders matching both rules require sequential approval from both roles. Set auto-approve threshold in company configuration for orders under $500."
+      },
+      {
+        "id": "C",
+        "text": "Build a custom approval workflow module using Magento's event/observer system to intercept order placement and route through a state machine with Manager and VP approval states"
+      },
+      {
+        "id": "D",
+        "text": "Use the native B2B quote negotiation workflow instead, configuring it so that orders above $500 require a quote request that must be approved by the appropriate manager level before conversion to an order"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct because Adobe Commerce B2B's Purchase Order Approval Rules support exactly this pattern. Rules are defined at the company level with conditions (order total thresholds) and required approver roles. When a purchase order matches multiple rules, all rules must be satisfied — creating the sequential chain. Rule 1 catches all orders ≥$500 and requires Manager approval. Rule 2 catches orders >$5,000 and additionally requires VP approval. Orders under $500 bypass approval entirely based on the company-level auto-approval configuration. If any approver rejects, the purchase order is rejected.\n\nA is wrong because there is no native \"auto-approve rule\" as a distinct rule type — auto-approval for low-value orders is handled by the absence of matching rules or company-level configuration, not by creating an explicit rule. Additionally, the framing of three separate rules misrepresents how rule matching works: the $500-$5,000 and >$5,000 rules should overlap (≥$500 catches both tiers) rather than being mutually exclusive ranges, because the sequential chain comes from an order matching multiple rules simultaneously.\n\nC is wrong because building a custom approval state machine duplicates the native Purchase Order approval functionality. The native system already provides rule-based routing, role-based approvers, sequential chains, and rejection handling. Custom development here adds maintenance cost and loses integration with the B2B company hierarchy and role system.\n\nD is wrong because the quote negotiation workflow serves a fundamentally different purpose — it's for price negotiation between buyer and seller, not internal purchase approval within a company. Quotes involve back-and-forth price adjustments with the merchant, while purchase approvals are internal governance within the buying organization. Using quotes for approvals would conflate two distinct business processes and confuse both buyers and the merchant's sales team.",
+    "codeExample": "// Programmatically creating purchase order approval rules\nuse Magento\\PurchaseOrderRule\\Api\\Data\\RuleInterface;\nuse Magento\\PurchaseOrderRule\\Api\\RuleRepositoryInterface;\n\n/** @var RuleRepositoryInterface $ruleRepository */\n/** @var RuleInterface $managerRule */\n$managerRule->setCompanyId($companyId);\n$managerRule->setName('Manager Approval >= $500');\n$managerRule->setIsActive(true);\n$managerRule->setConditionsSerialized(json_encode([\n    'type' => 'Magento\\\\PurchaseOrderRule\\\\Model\\\\Rule\\\\Condition\\\\Combine',\n    'conditions' => [[\n        'type' => 'Magento\\\\PurchaseOrderRule\\\\Model\\\\Rule\\\\Condition\\\\Address',\n        'attribute' => 'grand_total',\n        'operator' => '>=',\n        'value' => 500\n    ]]\n]));\n// Approver role IDs reference company roles from the hierarchy\n$managerRule->setApproverRoleIds([$managerRoleId]);\n$ruleRepository->save($managerRule);"
   }
 ]

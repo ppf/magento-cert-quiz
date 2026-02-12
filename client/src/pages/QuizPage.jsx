@@ -165,7 +165,7 @@ export default function QuizPage() {
 
   return (
     <div className="py-2">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Progress */}
         <ProgressBar current={quiz.currentQuestion} total={quiz.totalQuestions} />
 
