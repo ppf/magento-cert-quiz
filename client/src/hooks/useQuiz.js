@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import api from '../api'
 
 export default function useQuiz(questions, sessionId) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -38,16 +39,12 @@ export default function useQuiz(questions, sessionId) {
     }
     setAnsweredQuestions(prev => new Set([...prev, currentQuestion]))
 
-    fetch('/api/answers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId,
-        questionId: question.id,
-        questionOrder: currentQuestion,
-        selectedAnswers: selected,
-        isCorrect,
-      }),
+    api.post('/api/answers', {
+      sessionId,
+      questionId: question.id,
+      questionOrder: currentQuestion,
+      selectedAnswers: selected,
+      isCorrect,
     }).catch(() => {})
   }, [selectedAnswers, currentQuestion, question, answeredQuestions, sessionId])
 
@@ -68,11 +65,7 @@ export default function useQuiz(questions, sessionId) {
   }, [currentQuestion])
 
   const finishSession = useCallback((timeSpentSeconds) => {
-    fetch(`/api/sessions/${sessionId}/finish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ correctCount: score, timeSpentSeconds }),
-    }).catch(() => {})
+    api.post(`/api/sessions/${sessionId}/finish`, { correctCount: score, timeSpentSeconds }).catch(() => {})
   }, [sessionId, score])
 
   const restartQuiz = useCallback(() => {

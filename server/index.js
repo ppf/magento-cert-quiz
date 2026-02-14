@@ -32,7 +32,7 @@ app.use('/api/stats', statsRouter)
 // Production: serve built frontend
 const distPath = path.join(__dirname, '..', 'client', 'dist')
 app.use(express.static(distPath))
-app.get('*', (req, res) => {
+app.get('{*path}', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'))
 })
 
@@ -44,6 +44,6 @@ app.use((err, req, res, next) => {
   })
 })
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`)
 })

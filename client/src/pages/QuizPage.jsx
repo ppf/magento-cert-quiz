@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Check, BookOpen, Target, Shuffle, Play, Clock, Trophy } from 'lucide-react'
+import api from '../api'
 import useQuiz from '../hooks/useQuiz'
 import useTimer from '../hooks/useTimer'
 import QuestionCard from '../components/QuestionCard'
@@ -114,8 +115,7 @@ export default function QuizPage() {
   const timer = useTimer()
 
   useEffect(() => {
-    fetch('/api/questions')
-      .then(r => r.json())
+    api.get('/api/questions')
       .then(data => {
         setAllQuestions(data)
         setLoading(false)
@@ -132,12 +132,7 @@ export default function QuizPage() {
     const shuffled = shuffle(filtered)
     setQuestions(shuffled)
 
-    const res = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoryFilter: category, totalQuestions: shuffled.length }),
-    })
-    const { id } = await res.json()
+    const { id } = await api.post('/api/sessions', { categoryFilter: category, totalQuestions: shuffled.length })
     setSessionId(id)
     timer.start()
   }
