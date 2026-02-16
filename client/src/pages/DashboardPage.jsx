@@ -110,7 +110,18 @@ export default function DashboardPage() {
     .map(c => ({ ...c, accuracy: c.attempts > 0 ? (c.correct / c.attempts) * 100 : 0 }))
     .sort((a, b) => a.accuracy - b.accuracy)
 
+  const domainStats = (stats?.byExamDomain ?? [])
+    .filter(d => d.attempts > 0)
+    .map(d => ({ ...d, accuracy: d.attempts > 0 ? (d.correct / d.attempts) * 100 : 0 }))
+    .sort((a, b) => a.accuracy - b.accuracy)
+
   const recentSessions = sessions.filter(s => s.finished_at).slice(0, 10)
+
+  const domainLabelMap = {
+    Design: 'Design',
+    Review: 'Review',
+    ConfigureDeploy: 'Configure & Deploy'
+  }
 
   return (
     <div className="space-y-8">
@@ -166,6 +177,24 @@ export default function DashboardPage() {
               <Target size={18} className="text-accent" />
               Weak Areas
             </h2>
+            {domainStats.length > 0 && (
+              <div className="mb-5 pb-4 border-b border-white/[0.06]">
+                <h3 className="text-xs uppercase tracking-wider text-slate-500 mb-3">Exam Domains</h3>
+                <div className="space-y-2">
+                  {domainStats.map((domain) => (
+                    <div key={domain.examDomain} className="flex items-center gap-4">
+                      <span className="text-sm text-slate-300 w-44 truncate shrink-0" title={domain.examDomain}>
+                        {domainLabelMap[domain.examDomain] || domain.examDomain}
+                      </span>
+                      <AccuracyBar accuracy={domain.accuracy} />
+                      <span className="text-xs text-slate-500 w-16 text-right shrink-0">
+                        {domain.attempts} tried
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {weakAreas.length === 0 ? (
               <p className="text-sm text-slate-500 py-6 text-center">
                 Complete a quiz to see weak areas

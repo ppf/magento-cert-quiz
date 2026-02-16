@@ -1,7 +1,7 @@
 # AD0-E722 — 14-Day Study Schedule
 
 **Exam:** Adobe Commerce Architect (AD0-E722)
-**Questions available:** 174 (quiz app)
+**Questions available:** 210 (quiz app)
 **Daily time:** 1-2 hours
 **Format:** 60 multiple-choice, 120 minutes, ~62% passing
 
@@ -11,9 +11,9 @@
 
 | Section | Weight | Questions in Bank |
 |---------|--------|-------------------|
-| 1. Design Solutions (46%) | ~28 of 60 questions | 95 |
-| 2. Review Solutions (32%) | ~19 of 60 questions | 38 |
-| 3. Configure & Deploy (22%) | ~13 of 60 questions | 41 |
+| 1. Design Solutions (46%) | ~28 of 60 questions | 97 |
+| 2. Review Solutions (32%) | ~19 of 60 questions | 67 |
+| 3. Configure & Deploy (22%) | ~13 of 60 questions | 46 |
 
 ---
 
@@ -103,7 +103,7 @@
 
 ### Day 7 — Week 1 Review & Weak Areas
 **Full review day (90 min):**
-1. Run full quiz: ALL Design section categories (95 questions, timed)
+1. Run full quiz: ALL Design section categories (97 questions, timed)
 2. Track score per category
 3. Identify bottom 3 categories → re-read explanations
 4. Re-take wrong questions only
@@ -203,7 +203,7 @@
 ### Day 14 — Final Exam Simulation
 **Full exam simulation (120 min):**
 1. **Warm-up (10 min):** Review notes from weakest areas
-2. **Mock exam (90 min):** Run ALL 174 questions, strict timer
+2. **Mock exam (90 min):** Run ALL 210 questions, strict timer
    - Use the quiz app with no category filter
    - Don't look at explanations during the test
 3. **Review (20 min):**
@@ -231,7 +231,7 @@
 
 | Resource | When to Use |
 |----------|-------------|
-| Quiz App (174 questions) | Daily practice + Day 7/14 mock exams |
+| Quiz App (210 questions) | Daily practice + Day 7/14 mock exams |
 | [Adobe Exam Guide](https://express.adobe.com/page/5jFBMTOkbGFhN/) | Verify topic coverage |
 | [Adobe DevDocs](https://developer.adobe.com/commerce/php/development/) | Deep dives on weak areas |
 | [Cloud Docs](https://experienceleague.adobe.com/docs/commerce-cloud-service/) | Days 11-12 cloud topics |
@@ -249,14 +249,14 @@
 | 4 | Message Queue | /7 | |
 | 5 | Integration | /8 | |
 | 6 | Checkout & Orders | /12 | |
-| 7 | **Week 1 Review** | /95 | Design section |
+| 7 | **Week 1 Review** | /97 | Design section |
 | 8 | Code Review | /10 | |
 | 9 | Troubleshooting & Security | /17 | |
 | 10 | Testing & Customization | /15 | |
 | 11 | Cloud | /14 | |
 | 12 | Caching & Performance | /23 | |
 | 13 | Multi-site, Catalog, B2B | /20 | |
-| 14 | **Full Mock Exam** | /174 | All sections |
+| 14 | **Full Mock Exam** | /210 | All sections |
 
 ---
 

@@ -6,7 +6,8 @@
     "server": "node server/index.js",
     "client": "npm run dev --prefix client",
     "build": "cd client && npm install && npm run build",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "validate:questions": "node scripts/validate-questions.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
