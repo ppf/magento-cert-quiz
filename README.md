@@ -1,13 +1,13 @@
 # Adobe Commerce Architect Exam Prep (AD0-E722)
 
-Interactive quiz app with 121 questions across 39 categories for Adobe Commerce Architect certification prep.
+Interactive quiz app with 210 questions across 46 categories for Adobe Commerce Architect certification prep.
 
 ## Features
 
-- **Quiz sessions** with category filtering, shuffle, timer, and answer persistence
+- **Quiz sessions** with exam-domain and category filtering, shuffle, timer, and answer persistence
 - **Dashboard** with stats overview, weak area analysis, and session history
 - **Results review** with per-question breakdown, explanations, and code examples
-- **Progress tracking** via SQLite — tracks accuracy per question and category over time
+- **Progress tracking** via SQLite — tracks accuracy per question, category, and exam domain over time
 
 ## Stack
 
@@ -15,7 +15,7 @@ Interactive quiz app with 121 questions across 39 categories for Adobe Commerce 
 |-------|------|
 | Frontend | React 18 + Vite + Tailwind CSS |
 | Backend | Express + better-sqlite3 |
-| Data | 121 questions in JSON, SQLite for sessions/answers |
+| Data | 210 questions in JSON, SQLite for sessions/answers |
 
 ## Setup
 
@@ -35,7 +35,7 @@ cert/
 │   ├── index.js              # Express entry
 │   ├── db.js                 # SQLite schema + connection
 │   ├── routes/               # questions, sessions, answers, stats
-│   └── data/questions.json   # 121 exam questions
+│   └── data/questions.json   # 210 exam questions
 ├── client/
 │   └── src/
 │       ├── pages/            # Dashboard, Quiz, Results
@@ -50,8 +50,10 @@ Add question objects to `server/data/questions.json` following the schema:
 
 ```json
 {
-  "id": 122,
+  "id": 211,
   "category": "GraphQL",
+  "examDomain": "Design",
+  "objectiveTags": ["graphql", "resolver-patterns"],
   "difficulty": "Medium",
   "question": "Your question text",
   "options": [{ "id": "A", "text": "Option A" }],

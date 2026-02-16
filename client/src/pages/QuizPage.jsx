@@ -23,19 +23,33 @@ function shuffle(arr) {
 }
 
 function CategorySelect({ allQuestions, onStart }) {
-  const [selected, setSelected] = useState('All')
+  const [selectedCategory, setSelectedCategory] = useState('All')
+  const [selectedDomain, setSelectedDomain] = useState('All')
 
-  const categories = useMemo(() => {
+  const domains = useMemo(() => {
     const counts = {}
-    allQuestions.forEach(q => {
-      counts[q.category] = (counts[q.category] || 0) + 1
+    allQuestions.forEach((q) => {
+      counts[q.examDomain] = (counts[q.examDomain] || 0) + 1
     })
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [allQuestions])
 
-  const questionCount = selected === 'All'
-    ? allQuestions.length
-    : categories.find(([c]) => c === selected)?.[1] || 0
+  const domainFilteredQuestions = useMemo(() => {
+    if (selectedDomain === 'All') return allQuestions
+    return allQuestions.filter((q) => q.examDomain === selectedDomain)
+  }, [allQuestions, selectedDomain])
+
+  const categories = useMemo(() => {
+    const counts = {}
+    domainFilteredQuestions.forEach((q) => {
+      counts[q.category] = (counts[q.category] || 0) + 1
+    })
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
+  }, [domainFilteredQuestions])
+
+  const questionCount = selectedCategory === 'All'
+    ? domainFilteredQuestions.length
+    : categories.find(([c]) => c === selectedCategory)?.[1] || 0
 
   return (
     <div className="flex items-center justify-center py-8">
@@ -51,31 +65,66 @@ function CategorySelect({ allQuestions, onStart }) {
               Start a Quiz Session
             </span>
           </h1>
-          <p className="text-slate-400 text-sm">{allQuestions.length} questions across {categories.length} categories</p>
+          <p className="text-slate-400 text-sm">{allQuestions.length} questions across {domains.length} exam domains</p>
         </div>
 
         {/* Category selector card */}
         <div className="rounded-2xl border border-slate-700/40 bg-surface-800/70 backdrop-blur-xl p-6 shadow-2xl shadow-black/30 mb-6">
-          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Category</label>
-
+          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Exam Domain</label>
           <div className="flex flex-wrap gap-2 mb-6">
             <button
-              onClick={() => setSelected('All')}
+              onClick={() => {
+                setSelectedDomain('All')
+                setSelectedCategory('All')
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
-                selected === 'All'
+                selectedDomain === 'All'
                   ? 'bg-accent/20 border-accent/50 text-accent-light'
                   : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
               }`}
             >
-              All Categories
+              All Domains
               <span className="ml-1.5 text-xs opacity-60">{allQuestions.length}</span>
+            </button>
+            {domains.map(([domain, count]) => (
+              <button
+                key={domain}
+                onClick={() => {
+                  setSelectedDomain(domain)
+                  setSelectedCategory('All')
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                  selectedDomain === domain
+                    ? 'bg-accent/20 border-accent/50 text-accent-light'
+                    : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
+                }`}
+              >
+                {domain}
+                <span className="ml-1.5 text-xs opacity-60">{count}</span>
+              </button>
+            ))}
+          </div>
+
+          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Category</label>
+
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setSelectedCategory('All')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                selectedCategory === 'All'
+                  ? 'bg-accent/20 border-accent/50 text-accent-light'
+                  : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
+              }`}
+            >
+              {selectedDomain === 'All' ? 'All Categories' : `${selectedDomain} Categories`}
+              <span className="ml-1.5 text-xs opacity-60">{domainFilteredQuestions.length}</span>
             </button>
             {categories.map(([cat, count]) => (
               <button
                 key={cat}
-                onClick={() => setSelected(cat)}
+                onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
-                  selected === cat
+                  selectedCategory === cat
                     ? 'bg-accent/20 border-accent/50 text-accent-light'
                     : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
                 }`}
@@ -92,7 +141,7 @@ function CategorySelect({ allQuestions, onStart }) {
               <span>{questionCount} question{questionCount !== 1 ? 's' : ''} selected</span>
             </div>
             <button
-              onClick={() => onStart(selected)}
+              onClick={() => onStart({ category: selectedCategory, examDomain: selectedDomain })}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
               style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}
             >
@@ -124,15 +173,24 @@ export default function QuizPage() {
 
   const quiz = useQuiz(questions || [], sessionId)
 
-  async function handleStart(category) {
-    const filtered = category === 'All'
-      ? allQuestions
-      : allQuestions.filter(q => q.category === category)
+  async function handleStart(filters) {
+    const { category, examDomain } = filters
+
+    const filtered = allQuestions.filter((q) => {
+      const categoryMatch = category === 'All' || q.category === category
+      const domainMatch = examDomain === 'All' || q.examDomain === examDomain
+      return categoryMatch && domainMatch
+    })
 
     const shuffled = shuffle(filtered)
     setQuestions(shuffled)
 
-    const { id } = await api.post('/api/sessions', { categoryFilter: category, totalQuestions: shuffled.length })
+    let categoryFilter = 'All'
+    if (examDomain !== 'All' && category !== 'All') categoryFilter = `${examDomain} / ${category}`
+    else if (examDomain !== 'All') categoryFilter = `Domain: ${examDomain}`
+    else if (category !== 'All') categoryFilter = category
+
+    const { id } = await api.post('/api/sessions', { categoryFilter, totalQuestions: shuffled.length })
     setSessionId(id)
     timer.start()
   }

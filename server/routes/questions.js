@@ -5,11 +5,19 @@ const router = Router()
 const questions = require(path.join(__dirname, '..', 'data', 'questions.json'))
 
 router.get('/', (req, res) => {
-  const { category } = req.query
+  const { category, examDomain } = req.query
+
+  let filtered = questions
+
   if (category && category !== 'All') {
-    return res.json(questions.filter(q => q.category === category))
+    filtered = filtered.filter((q) => q.category === category)
   }
-  res.json(questions)
+
+  if (examDomain && examDomain !== 'All') {
+    filtered = filtered.filter((q) => q.examDomain === examDomain)
+  }
+
+  res.json(filtered)
 })
 
 module.exports = router
