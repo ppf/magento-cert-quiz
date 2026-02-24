@@ -25,19 +25,27 @@ function shuffle(arr) {
 function CategorySelect({ allQuestions, onStart }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedDomain, setSelectedDomain] = useState('All')
+  const [examFeedbackOnly, setExamFeedbackOnly] = useState(false)
+
+  const baseQuestions = useMemo(() => {
+    if (examFeedbackOnly) return allQuestions.filter(q => q.examFeedback)
+    return allQuestions
+  }, [allQuestions, examFeedbackOnly])
+
+  const examFeedbackCount = useMemo(() => allQuestions.filter(q => q.examFeedback).length, [allQuestions])
 
   const domains = useMemo(() => {
     const counts = {}
-    allQuestions.forEach((q) => {
+    baseQuestions.forEach((q) => {
       counts[q.examDomain] = (counts[q.examDomain] || 0) + 1
     })
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
-  }, [allQuestions])
+  }, [baseQuestions])
 
   const domainFilteredQuestions = useMemo(() => {
-    if (selectedDomain === 'All') return allQuestions
-    return allQuestions.filter((q) => q.examDomain === selectedDomain)
-  }, [allQuestions, selectedDomain])
+    if (selectedDomain === 'All') return baseQuestions
+    return baseQuestions.filter((q) => q.examDomain === selectedDomain)
+  }, [baseQuestions, selectedDomain])
 
   const categories = useMemo(() => {
     const counts = {}
@@ -65,11 +73,37 @@ function CategorySelect({ allQuestions, onStart }) {
               Start a Quiz Session
             </span>
           </h1>
-          <p className="text-slate-400 text-sm">{allQuestions.length} questions across {domains.length} exam domains</p>
+          <p className="text-slate-400 text-sm">{baseQuestions.length} questions across {domains.length} exam domains</p>
         </div>
 
         {/* Category selector card */}
         <div className="rounded-2xl border border-slate-700/40 bg-surface-800/70 backdrop-blur-xl p-6 shadow-2xl shadow-black/30 mb-6">
+          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Source</label>
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => { setExamFeedbackOnly(false); setSelectedDomain('All'); setSelectedCategory('All') }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                !examFeedbackOnly
+                  ? 'bg-accent/20 border-accent/50 text-accent-light'
+                  : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
+              }`}
+            >
+              All Questions
+              <span className="ml-1.5 text-xs opacity-60">{allQuestions.length}</span>
+            </button>
+            <button
+              onClick={() => { setExamFeedbackOnly(true); setSelectedDomain('All'); setSelectedCategory('All') }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                examFeedbackOnly
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
+              }`}
+            >
+              Exam Feedback
+              <span className="ml-1.5 text-xs opacity-60">{examFeedbackCount}</span>
+            </button>
+          </div>
+
           <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Exam Domain</label>
           <div className="flex flex-wrap gap-2 mb-6">
             <button

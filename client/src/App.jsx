@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import QuizPage from './pages/QuizPage'
 import ResultsPage from './pages/ResultsPage'
+import QuestionBankPage from './pages/QuestionBankPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -18,6 +19,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/questions" element={<QuestionBankPage />} />
         <Route path="/quiz" element={<QuizPage />} />
         <Route path="/results/:id" element={<ResultsPage />} />
       </Route>

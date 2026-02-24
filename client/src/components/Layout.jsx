@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Play, LogOut } from 'lucide-react'
+import { LayoutDashboard, Search, Play, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/questions', label: 'Questions', icon: Search },
   { to: '/quiz', label: 'Quiz', icon: Play },
 ]
 

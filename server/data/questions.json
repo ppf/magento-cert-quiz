@@ -7343,5 +7343,1773 @@
       "B"
     ],
     "explanation": "B is correct because high-volume data ingestion should be decoupled from synchronous request paths. Async bulk processing smooths load, supports retries, and protects customer-facing latency.\n\nA scales symptoms only. C harms revenue-critical flows. D sidesteps architecture and can worsen abuse controls."
+  },
+  {
+    "id": 211,
+    "category": "Customization Architecture",
+    "difficulty": "Medium",
+    "question": "An eCommerce store wants to leverage customer data to provide personalized experiences and targeted marketing campaigns. What should an Adobe Commerce architect recommend for implementing personalization features to enhance customer engagement?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Implement dynamic content rendering to display relevant content based on user preferences"
+      },
+      {
+        "id": "B",
+        "text": "Personalize email marketing campaigns based on customer behavior and purchase history"
+      },
+      {
+        "id": "C",
+        "text": "Utilize customer data to create personalized product recommendations"
+      },
+      {
+        "id": "D",
+        "text": "Employ geo-targeting to deliver localized content and offers to customers based on their location"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "For personalization in Adobe Commerce, the three core strategies are dynamic content rendering, personalized email campaigns, and data-driven product recommendations.\n\nWhy A, B, C are correct:\n- A: Dynamic content rendering uses customer segments and rules to show relevant banners, blocks, and promotions based on browsing history and preferences\n- B: Email personalization leverages purchase history and behavior data for targeted campaigns through Adobe Commerce's built-in email marketing integrations\n- C: Product recommendations use collaborative filtering and customer purchase data to suggest relevant products, directly increasing conversion rates\n\nWhy D is incorrect:\n- Geo-targeting delivers localized content based on location, which is a localization feature rather than a personalization strategy based on individual customer data and behavior patterns",
+    "codeExample": null,
+    "examDomain": "Design",
+    "objectiveTags": [
+      "personalization",
+      "customer-segments",
+      "architecture-decisions"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 212,
+    "category": "Integration Architecture",
+    "difficulty": "Medium",
+    "question": "A client wants to integrate their Adobe Commerce store with an external ERP system for real-time inventory updates. Which option would be most efficient for this integration?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Inventory source API and pre-built ERP connectors"
+      },
+      {
+        "id": "B",
+        "text": "Webhooks and custom data synchronization scripts"
+      },
+      {
+        "id": "C",
+        "text": "Magento Inventory Management API and custom middleware"
+      },
+      {
+        "id": "D",
+        "text": "CSV import/export and scheduled data feeds"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct. The Magento Inventory Management API with custom middleware is the recommended approach for ERP integration because it leverages Adobe Commerce's built-in Multi-Source Inventory (MSI) framework. Custom middleware acts as a translation layer between the ERP's data format and Magento's API, providing reliable two-way synchronization.\n\nWhy others are incorrect:\n- A (Inventory source API and pre-built ERP connectors): Pre-built connectors may not exist for all ERPs and lack the customization needed for complex business requirements.\n- B (Webhooks and event-driven architecture): Webhooks alone don't provide a complete integration solution — they handle notifications but not the full data synchronization workflow.\n- D (CSV import/export with scheduled cron jobs): CSV-based integration is fragile, doesn't support real-time updates, and is prone to data format issues. This is a legacy approach unsuitable for modern ERP integration.",
+    "codeExample": null,
+    "examDomain": "Design",
+    "objectiveTags": [
+      "integration",
+      "msi",
+      "erp",
+      "api-design"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 213,
+    "category": "Configuration & XML",
+    "difficulty": "Medium",
+    "question": "A multi-lingual website needs to import product information from PIM. The backend admin needs to configure options for API input limiting. On which configuration scope should the admin perform this action?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Values can be configured at all config scopes."
+      },
+      {
+        "id": "B",
+        "text": "Values can be configured only globally scope."
+      },
+      {
+        "id": "C",
+        "text": "Values can be configured only in website and globally scope."
+      },
+      {
+        "id": "D",
+        "text": "Values can be configured only per website scope."
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct. In Adobe Commerce, store configuration values can be configured at all config scopes (default/global, website, and store view). This is important for multi-lingual websites importing product information from a PIM, as it allows different values per store view for translations while maintaining global defaults.\n\nWhy others are incorrect:\n- B (only globally scope): This is too restrictive — Adobe Commerce's configuration system supports multiple scopes.\n- C (only website and globally): Missing store view scope, which is essential for multi-lingual setups.\n- D (only per website scope): Adobe Commerce supports all three levels: global, website, and store view.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "scope-configuration",
+      "web-api",
+      "system-configuration"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 214,
+    "category": "MSI (Inventory)",
+    "difficulty": "Hard",
+    "question": "A client has a B2B website and has a requirement for products source selection based on the client's warehouse location. The Adobe Commerce Architect noticed that the requirement cannot be fulfilled by the out-of-box source selection algorithms. Which interface should they implement to develop a custom Source Selection Algorithm (SSA)?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Implement SourceSelectionAlgorithmInterface"
+      },
+      {
+        "id": "B",
+        "text": "Implement SourceSelectionServiceInterface"
+      },
+      {
+        "id": "C",
+        "text": "Implement SourceSelectionInterface"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct. To implement custom source selection logic for B2B product sourcing, you should implement the SourceSelectionInterface. This interface defines the contract for source selection algorithms in Adobe Commerce's Multi-Source Inventory (MSI) framework, allowing you to create custom logic for determining which inventory sources fulfill orders.\n\nWhy others are incorrect:\n- A (SourceSelectionAlgorithmInterface): This is not the correct interface name for implementing custom source selection in MSI.\n- B (SourceSelectionServiceInterface): This interface is for the service layer that orchestrates source selection, not for defining the selection algorithm itself.",
+    "codeExample": "<?php\nnamespace Vendor\\Module\\Model\\Algorithm;\n\nuse Magento\\InventorySourceSelectionApi\\Api\\SourceSelectionAlgorithmInterface;\nuse Magento\\InventorySourceSelectionApi\\Api\\Data\\InventoryRequestInterface;\nuse Magento\\InventorySourceSelectionApi\\Api\\Data\\SourceSelectionResultInterface;\n\nclass WarehouseProximity implements SourceSelectionAlgorithmInterface\n{\n    public function execute(\n        InventoryRequestInterface $inventoryRequest\n    ): SourceSelectionResultInterface {\n        // Custom logic: select sources based on warehouse proximity\n        // to the customer's location\n    }\n}\n\n<!-- di.xml registration -->\n<type name=\"Magento\\InventorySourceSelectionApi\\Model\\SourceSelectionAlgorithmPool\">\n    <arguments>\n        <argument name=\"sourceSelectionAlgorithms\" xsi:type=\"array\">\n            <item name=\"warehouse_proximity\" xsi:type=\"array\">\n                <item name=\"algorithmCode\" xsi:type=\"string\">warehouse_proximity</item>\n                <item name=\"className\" xsi:type=\"object\">Vendor\\Module\\Model\\Algorithm\\WarehouseProximity</item>\n                <item name=\"title\" xsi:type=\"string\">Warehouse Proximity</item>\n            </item>\n        </argument>\n    </arguments>\n</type>",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "msi",
+      "source-selection",
+      "service-contracts",
+      "customization"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 215,
+    "category": "Database",
+    "difficulty": "Medium",
+    "question": "You want to change the increment ID for a Commerce database (DB) entity, such as an order, invoice, or credit memo. What is the correct ALTER SQL statement?",
+    "options": [
+      {
+        "id": "A",
+        "text": "ALTER TABLE sequence_{entity_type}_{website_id} AUTO_INCREMENT = {new_increment_value};"
+      },
+      {
+        "id": "B",
+        "text": "ALTER TABLE sequence_{entity_type}_{store_id} AUTO_INCREMENT = {new_increment_value};"
+      },
+      {
+        "id": "C",
+        "text": "ALTER TABLE sequence-{entity_type}-{store_id} AUTO_INCREMENT = {new_increment_value};"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "The correct SQL statement uses the store_id (not website_id) and underscores (not hyphens) in the table name.\n\nWhy B is correct:\n- Magento 2 uses sequence tables to generate increment IDs for orders, invoices, credit memos, and shipments\n- The naming convention is sequence_{entity_type}_{store_id} (e.g., sequence_order_1, sequence_invoice_1)\n- Increment IDs are scoped per store, not per website, because each store view can have its own order numbering prefix/suffix\n- ALTER TABLE with AUTO_INCREMENT correctly resets the next generated value\n\nWhy others are incorrect:\n- A: Uses website_id instead of store_id; sequence tables are keyed by store, not website\n- C: Uses hyphens instead of underscores; MySQL table names follow underscore convention, and hyphens would require backtick escaping and don't match Magento's naming pattern",
+    "codeExample": "-- Example: Reset order increment ID for store 1 to start at 100000500\nALTER TABLE sequence_order_1 AUTO_INCREMENT = 100000500;\n\n-- Example: Reset invoice increment ID for store 2\nALTER TABLE sequence_invoice_2 AUTO_INCREMENT = 200000001;\n\n-- View current auto_increment value\nSELECT AUTO_INCREMENT \nFROM information_schema.TABLES \nWHERE TABLE_NAME = 'sequence_order_1';",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "database",
+      "sequence-tables",
+      "increment-id",
+      "store-scope"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 216,
+    "category": "Customization Architecture",
+    "difficulty": "Medium",
+    "question": "The client's business requires efficient handling of high website traffic, seamless integration with third-party payment gateways, and personalized customer experiences. Which solution would the Adobe Commerce Architect recommend to meet these requirements?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Placing a primary focus on visual attractiveness of the interface, even if it contradicts business needs"
+      },
+      {
+        "id": "B",
+        "text": "Using the maximum number of extensions and modules to enrich functionality"
+      },
+      {
+        "id": "C",
+        "text": "Analyzing and understanding unique business requirements to develop the most suitable and efficient solutions"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "An Adobe Commerce Architect should always start by analyzing and understanding unique business requirements to design the most suitable solution.\n\nWhy C is correct:\n- Architecture decisions must be driven by specific business requirements, not generic solutions\n- Understanding requirements first ensures the right technology choices for traffic handling (e.g., Varnish, Redis, CDN)\n- Payment gateway integration needs careful analysis of transaction volume, supported methods, and compliance requirements\n- Personalization strategy depends on specific customer data available and business goals\n- This approach follows the Architect exam's emphasis on requirement-driven design\n\nWhy others are incorrect:\n- A: Visual attractiveness should support business goals, not contradict them; UX decisions must be aligned with conversion and business objectives\n- B: Adding maximum extensions creates performance overhead, increases security attack surface, and creates maintenance burden; modules should be added only when justified by requirements",
+    "codeExample": null,
+    "examDomain": "Design",
+    "objectiveTags": [
+      "architecture-decisions",
+      "requirements-analysis",
+      "solution-design"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 217,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Hard",
+    "question": "An Architect needs to create a new product type based on business requirements, which can have a custom pricing logic. How can these be achieved?",
+    "options": [
+      {
+        "id": "A",
+        "text": "New Data patch for the new product type"
+      },
+      {
+        "id": "B",
+        "text": "A new class with custom pricing logic, extending abstract Product Model class"
+      },
+      {
+        "id": "C",
+        "text": "etc/product_types.xml needs to be created with new Price model that extends \\Magento\\Catalog\\Product\\Type\\Price"
+      },
+      {
+        "id": "D",
+        "text": "Hydrator for attributes for the new Product Type"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "To create a new product type with custom pricing in Adobe Commerce, you must define it in product_types.xml with a custom Price model.\n\nWhy C is correct:\n- New product types in Magento 2 are registered through etc/product_types.xml configuration\n- The XML file defines the product type code, label, model class, and associated price model\n- Custom pricing logic requires a Price model class that extends \\Magento\\Catalog\\Model\\Product\\Type\\Price\n- This is the standard Magento 2 extensibility mechanism for product types (e.g., bundle, configurable, grouped all use this pattern)\n\nWhy others are incorrect:\n- A: Data patches are for database schema/data changes, not for registering product types; the product type must be declared in XML\n- B: Extending the abstract Product Model class alone doesn't register the type or associate custom pricing; the XML declaration is required\n- D: Hydrators handle data extraction/population, not product type registration or pricing logic",
+    "codeExample": "<!-- etc/product_types.xml -->\n<config xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n        xsi:noNamespaceSchemaLocation=\"urn:magento:module:Magento_Catalog:etc/product_types.xsd\">\n    <type name=\"custom_type\" label=\"Custom Product\" modelInstance=\"Vendor\\Module\\Model\\Product\\Type\\Custom\">\n        <priceModel instance=\"Vendor\\Module\\Model\\Product\\Price\" />\n    </type>\n</config>\n\n// Custom Price Model\nnamespace Vendor\\Module\\Model\\Product;\n\nclass Price extends \\Magento\\Catalog\\Model\\Product\\Type\\Price\n{\n    public function getPrice($product)\n    {\n        // Custom pricing logic here\n        return $this->calculateCustomPrice($product);\n    }\n}",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "product-types",
+      "pricing",
+      "xml-configuration",
+      "customization"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 218,
+    "category": "Code Architecture",
+    "difficulty": "Medium",
+    "question": "What is the role of the Magento configuration areas?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Areas define the division into physical segments of the server for more efficient request processing"
+      },
+      {
+        "id": "B",
+        "text": "Areas represent different sections of the user interface, such as header, sidebar, and content"
+      },
+      {
+        "id": "C",
+        "text": "Areas organize code for optimized request processing"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "Magento areas are logical groupings that organize code to optimize request processing by loading only what's needed for each context.\n\nWhy C is correct:\n- Areas (frontend, adminhtml, webapi_rest, webapi_soap, crontab, graphql) are logical code organization boundaries\n- Each area loads only the configuration, plugins, observers, and layouts relevant to that context\n- This reduces memory usage and improves performance by not loading admin code for frontend requests and vice versa\n- Areas control which di.xml, routes.xml, layout XML, and event observers are active for a given request\n\nWhy others are incorrect:\n- A: Areas are logical code organization, not physical server segments; they don't divide server hardware or processes\n- B: Header, sidebar, and content are layout containers/blocks, not areas; areas operate at a higher level than UI sections",
+    "codeExample": "// Magento 2 Areas:\n// - frontend     (storefront requests)\n// - adminhtml    (admin panel requests)\n// - webapi_rest  (REST API requests)\n// - webapi_soap  (SOAP API requests)\n// - crontab      (cron job execution)\n// - graphql      (GraphQL requests)\n\n// Area-specific configuration loading:\n// etc/frontend/di.xml       → only loaded for storefront\n// etc/adminhtml/di.xml      → only loaded for admin\n// etc/frontend/routes.xml   → frontend routes only\n// etc/frontend/events.xml   → frontend observers only",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "areas",
+      "code-organization",
+      "request-processing",
+      "architecture"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 219,
+    "category": "Plugins & DI",
+    "difficulty": "Medium",
+    "question": "An Adobe Commerce Architect needs to modify each URL generated by an instance of Magento\\Framework\\Url class. What is the recommended way of completing this task?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Directly modify the core Magento\\Framework\\Url class to incorporate the necessary modifications into the URL generation process"
+      },
+      {
+        "id": "B",
+        "text": "Implement a custom URL generation class by extending Magento\\Framework\\Url and override the necessary methods to apply the desired modifications"
+      },
+      {
+        "id": "C",
+        "text": "Implement a custom Plugin for Magento\\Framework\\Url and apply the desired modifications in the afterGetUrl method"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "The recommended approach is to use a Plugin (interceptor) with an after method to modify URL output.\n\nWhy C is correct:\n- Plugins are Magento 2's recommended mechanism for modifying behavior of public methods without changing core code\n- An afterGetUrl plugin intercepts the return value of getUrl() and can modify every generated URL\n- This approach is non-invasive, upgrade-safe, and follows Magento's extensibility best practices\n- Multiple modules can add plugins without conflicting, using sortOrder for execution priority\n\nWhy others are incorrect:\n- A: Directly modifying core classes breaks upgradeability, violates Magento coding standards, and changes are lost during updates\n- B: Class extension via preference replaces the entire class, preventing other modules from customizing the same class; plugins are preferred when you only need to modify specific method behavior",
+    "codeExample": "<!-- etc/di.xml -->\n<type name=\"Magento\\Framework\\Url\">\n    <plugin name=\"vendor_custom_url_modifier\"\n            type=\"Vendor\\Module\\Plugin\\UrlModifierPlugin\"\n            sortOrder=\"10\" />\n</type>\n\n// Plugin class\nnamespace Vendor\\Module\\Plugin;\n\nclass UrlModifierPlugin\n{\n    public function afterGetUrl(\n        \\Magento\\Framework\\Url $subject,\n        string $result\n    ): string {\n        // Modify the generated URL\n        // e.g., append tracking parameters\n        return $result . '?utm_source=custom';\n    }\n}",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "plugins",
+      "interception",
+      "url-management",
+      "customization"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 220,
+    "category": "Configuration & XML",
+    "difficulty": "Hard",
+    "question": "An Architect wants to create a new configuration type in Magento. Which two steps are necessary to complete this successfully? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Create a loader for the new configuration type"
+      },
+      {
+        "id": "B",
+        "text": "Create a new module and include required settings in config.xml"
+      },
+      {
+        "id": "C",
+        "text": "Create an XML specification using DOMDocument and save it in the appropriate directory"
+      },
+      {
+        "id": "D",
+        "text": "Define the XSD schema and generate the XML file with the appropriate structure"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "D"
+    ],
+    "explanation": "Creating a new configuration type in Magento 2 requires two fundamental components:\n\n1. Create a loader (A): The loader (Config Reader) is responsible for reading and parsing the XML configuration files from all modules. It implements \\Magento\\Framework\\Config\\ReaderInterface and uses a file resolver to locate the XML files across modules, then merges them. Without a loader, Magento cannot discover or read the new configuration files.\n\n2. Define the XSD schema and generate the XML file (D): The XSD schema defines the valid structure, elements, and attributes of the configuration XML. Magento uses XSD for both IDE validation and runtime validation. The XML file must conform to this schema. You need both a per-file schema and a merged-file schema.\n\nWhy B is wrong: While a module is needed to house the implementation, the configuration type itself is not defined in config.xml. config.xml is for system configuration values, not for defining new configuration types.\n\nWhy C is wrong: You do not manually create XML using DOMDocument. Magento's configuration system uses file-based XML that is parsed by the framework's built-in readers. DOMDocument manipulation is an implementation detail of the converter, not a step the developer performs.",
+    "codeExample": "// 1. Define XSD schema (etc/custom_config.xsd)\n// <xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n//   <xs:element name=\"config\">\n//     <xs:complexType>\n//       <xs:sequence>\n//         <xs:element name=\"item\" maxOccurs=\"unbounded\">\n//           <xs:complexType>\n//             <xs:attribute name=\"name\" type=\"xs:string\" use=\"required\"/>\n//           </xs:complexType>\n//         </xs:element>\n//       </xs:sequence>\n//     </xs:complexType>\n//   </xs:element>\n// </xs:schema>\n\n// 2. Create the Reader (loader)\nclass Reader extends \\Magento\\Framework\\Config\\Reader\\Filesystem\n{\n    public function __construct(\n        FileResolverInterface $fileResolver,\n        Converter $converter,\n        SchemaLocator $schemaLocator,\n        ValidationState $validationState,\n        $fileName = 'custom_config.xml',\n        $idAttributes = ['/config/item' => 'name'],\n        $domDocumentClass = 'Magento\\Framework\\Config\\Dom',\n        $defaultScope = 'global'\n    ) {\n        parent::__construct(\n            $fileResolver, $converter, $schemaLocator,\n            $validationState, $fileName, $idAttributes,\n            $domDocumentClass, $defaultScope\n        );\n    }\n}",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "xml-configuration",
+      "merge-rules",
+      "module-architecture"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 221,
+    "category": "Dependency Injection",
+    "difficulty": "Medium",
+    "question": "A developer needs to iterate over a collection of entities called ItemCollection in a custom class of a module. What is the recommended way to create an instance of the ItemCollection?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Inject the ItemCollectionFactory dependency and use it to create the instance"
+      },
+      {
+        "id": "B",
+        "text": "Create an ItemCollectionFactory first and then use it to create the instance"
+      },
+      {
+        "id": "C",
+        "text": "Use the \"new\" keyword to create the instance"
+      },
+      {
+        "id": "D",
+        "text": "Use the ObjectManager to create the instance"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "In Magento 2, the recommended way to create non-injectable (newable) objects like collections is through auto-generated Factory classes injected via constructor dependency injection.\n\nWhy A is correct:\n- Factories are auto-generated by Magento for any class\n- Injecting the factory via constructor DI allows the ObjectManager to resolve all dependencies properly\n- Factory->create() returns a new, clean instance each time\n- This follows Magento's dependency injection best practices and keeps code testable\n\nWhy B is wrong: Manually creating a factory (using new ItemCollectionFactory()) bypasses the DI container, meaning the factory's own dependencies won't be resolved. Factories should be injected, not manually instantiated.\n\nWhy C is wrong: Using the 'new' keyword bypasses the ObjectManager entirely. Collections have dependencies (database connection, resource model, etc.) that won't be injected, causing failures.\n\nWhy D is wrong: Direct ObjectManager usage is an anti-pattern in Magento 2. It creates hidden dependencies, makes code untestable, and violates inversion of control. ObjectManager should only be used in factories, interceptors, and entry points.",
+    "codeExample": "// Correct: Inject factory via constructor DI\nclass ItemProcessor\n{\n    public function __construct(\n        private readonly ItemCollectionFactory $itemCollectionFactory\n    ) {}\n\n    public function getItems(): array\n    {\n        // Factory creates a fresh collection instance\n        $collection = $this->itemCollectionFactory->create();\n        $collection->addFieldToFilter('status', 1);\n        return $collection->getItems();\n    }\n}\n\n// Wrong: Manual factory creation\n$factory = new ItemCollectionFactory(); // Dependencies not resolved!\n\n// Wrong: Direct ObjectManager\n$collection = ObjectManager::getInstance()->create(ItemCollection::class);\n\n// Wrong: PHP new keyword\n$collection = new ItemCollection(); // Dependencies missing!",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "di",
+      "object-manager",
+      "factory-pattern"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 222,
+    "category": "Cron & Scheduling",
+    "difficulty": "Medium",
+    "question": "A developer created a functionality that replaces the visitor_clean cron job. Which code snippet can be used to disable the cron job?",
+    "options": [
+      {
+        "id": "A",
+        "text": "<group id=\"default\"><job name=\"visitor_clean\" instance=\"Magento\\Customer\\Model\\Visitor\" method=\"clean\" disabled><schedule>* * * * *</schedule></job></group>"
+      },
+      {
+        "id": "B",
+        "text": "<group id=\"default\"><job name=\"visitor_clean\" instance=\"Magento\\Customer\\Model\\Visitor\" method=\"clean\"><schedule>0 0 30 2 *</schedule></job></group>"
+      },
+      {
+        "id": "C",
+        "text": "<group id=\"default\"><job name=\"visitor_clean\" instance=\"Magento\\Customer\\Model\\Visitor\" method=\"clean\" disabled=\"true\"><schedule>0 0 * * *</schedule></job></group>"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct. To disable a cron job in Adobe Commerce, you need to create a crontab.xml that sets the job's schedule to an empty value or removes it. The correct XML configuration overrides the original cron job definition with the custom module's replacement.\n\nWhy others are incorrect:\n- A: This configuration doesn't properly disable the original cron job.\n- C: This approach doesn't follow Adobe Commerce's cron configuration conventions for disabling jobs.",
+    "codeExample": "<!-- etc/crontab.xml in your custom module -->\n<config xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n        xsi:noNamespaceSchemaLocation=\"urn:magento:module:Magento_Cron:etc/crontab.xsd\">\n    <group id=\"default\">\n        <!-- Disable the core visitor_clean cron job -->\n        <job name=\"visitor_clean\"\n             instance=\"Magento\\Customer\\Model\\Visitor\"\n             method=\"clean\"\n             disabled=\"true\">\n            <schedule>0 0 * * *</schedule>\n        </job>\n    </group>\n</config>\n\n<!-- Your replacement cron job -->\n<config xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n        xsi:noNamespaceSchemaLocation=\"urn:magento:module:Magento_Cron:etc/crontab.xsd\">\n    <group id=\"default\">\n        <job name=\"custom_visitor_clean\"\n             instance=\"Vendor\\Module\\Cron\\VisitorClean\"\n             method=\"execute\">\n            <schedule>0 2 * * *</schedule>\n        </job>\n    </group>\n</config>",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cron",
+      "xml-configuration",
+      "operational-reliability"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 223,
+    "category": "Module Development",
+    "difficulty": "Medium",
+    "question": "A Commerce architect wants to build a custom command. This will add a new command to CLI based on passing on the argument from the XML. Which class should be used?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Magento\\Framework\\CommandList\\Console"
+      },
+      {
+        "id": "B",
+        "text": "Magento\\Framework\\Console\\CommandList"
+      },
+      {
+        "id": "C",
+        "text": "Magento\\Framework\\CommandList"
+      },
+      {
+        "id": "D",
+        "text": "Magento\\Framework\\Console"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct. To register a custom CLI command in Adobe Commerce, you add it to the Magento\\Framework\\Console\\CommandList via dependency injection (di.xml). The CommandList class collects all console commands and makes them available to the Symfony Console application.\n\nWhy others are incorrect:\n- B (Magento\\Framework\\Console\\CommandList): Close but the correct class path needs to be referenced properly in di.xml configuration.\n- C (Magento\\Framework\\CommandList): This is not the correct namespace — commands are in the Console namespace.\n- D (Magento\\Framework\\CommandList\\Console): Incorrect namespace ordering.",
+    "codeExample": "<!-- etc/di.xml - Register custom CLI command -->\n<type name=\"Magento\\Framework\\Console\\CommandList\">\n    <arguments>\n        <argument name=\"commands\" xsi:type=\"array\">\n            <item name=\"vendor_custom_command\" xsi:type=\"object\">\n                Vendor\\Module\\Console\\Command\\CustomCommand\n            </item>\n        </argument>\n    </arguments>\n</type>\n\n// Console/Command/CustomCommand.php\nuse Symfony\\Component\\Console\\Command\\Command;\nuse Symfony\\Component\\Console\\Input\\InputArgument;\nuse Symfony\\Component\\Console\\Input\\InputInterface;\nuse Symfony\\Component\\Console\\Output\\OutputInterface;\n\nclass CustomCommand extends Command\n{\n    protected function configure()\n    {\n        $this->setName('vendor:custom:process')\n            ->setDescription('Process custom data')\n            ->addArgument('type', InputArgument::REQUIRED, 'Processing type');\n    }\n\n    protected function execute(InputInterface $input, OutputInterface $output): int\n    {\n        $type = $input->getArgument('type');\n        $output->writeln(\"Processing: {$type}\");\n        return Command::SUCCESS;\n    }\n}",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "module-architecture",
+      "cli-tools",
+      "di"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 224,
+    "category": "Theme Development",
+    "difficulty": "Medium",
+    "question": "In Adobe Commerce, how are layout handles used to modify the layout of a page?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Layout handles are processed during page rendering to generate the final HTML"
+      },
+      {
+        "id": "B",
+        "text": "Layout handles are applied directly to the page template"
+      },
+      {
+        "id": "C",
+        "text": "Layout handles are assigned directly to CMS pages"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "Layout handles are identifiers that determine which layout XML instructions are collected and processed when rendering a page.\n\nWhy A is correct:\n- Layout handles are string identifiers (e.g., catalog_product_view, default, customer_account) that are added to a page request\n- During rendering, Magento collects all layout XML instructions associated with the active handles\n- These instructions are merged and processed to build the page structure (containers, blocks, UI components)\n- The merged layout generates the final HTML output through the block/template rendering chain\n- Handles can come from route matching, custom handle additions, or page type\n\nWhy B is wrong: Layout handles are not applied to templates. They are processed by the Layout system which determines page structure. Templates are rendered by blocks that the layout system instantiates.\n\nWhy C is wrong: While CMS pages do have layout updates, handles are not \"assigned\" to CMS pages. CMS pages use specific handles (e.g., cms_page_view) that are triggered by the route. The layout system is a general mechanism used across all page types, not specific to CMS.",
+    "codeExample": "<!-- Layout handles are triggered by routes and page types -->\n\n<!-- default handle: applied to ALL pages -->\n<!-- view/frontend/layout/default.xml -->\n<page xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <body>\n        <referenceContainer name=\"header\">\n            <block class=\"Vendor\\Module\\Block\\Banner\" name=\"promo.banner\"\n                   template=\"Vendor_Module::banner.phtml\"/>\n        </referenceContainer>\n    </body>\n</page>\n\n<!-- catalog_product_view handle: product detail pages -->\n<!-- view/frontend/layout/catalog_product_view.xml -->\n<page xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n    <body>\n        <referenceBlock name=\"product.info.details\">\n            <block class=\"Vendor\\Module\\Block\\CustomTab\" name=\"custom.tab\"/>\n        </referenceBlock>\n    </body>\n</page>\n\n<!-- Custom handle added programmatically -->\n// In a controller:\n$this->getLayout()->getUpdate()->addHandle('custom_special_handle');",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "frontend-architecture",
+      "xml-configuration",
+      "theme-fallback"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 225,
+    "category": "Performance",
+    "difficulty": "Medium",
+    "question": "An Adobe Commerce Developer is tasked with optimizing Magento product page performance. The server resources are already optimized, and caching mechanisms are in place. What are the recommended ways to optimize the page performance? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Minimize the usage of JavaScript and CSS files to decrease the number of HTTP requests"
+      },
+      {
+        "id": "B",
+        "text": "Apply Full Page Cache (FPC) to store pre-rendered product pages to improve loading speed"
+      },
+      {
+        "id": "C",
+        "text": "Consider implementing Content Delivery Network (CDN) to distribute content across multiple servers"
+      },
+      {
+        "id": "D",
+        "text": "Utilize image compression and lazy loading to reduce the page load time"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "D"
+    ],
+    "explanation": "Given that server resources are already optimized and caching is in place, the remaining optimization opportunities are on the frontend/client side.\n\nWhy A is correct:\n- Reducing the number of JS and CSS files decreases HTTP requests\n- Magento supports CSS/JS merging and minification\n- Fewer requests mean faster page loads, especially on slower connections\n- This is a frontend optimization that complements existing server-side caching\n\nWhy D is correct:\n- Product pages are image-heavy; uncompressed images are often the largest page weight contributor\n- Image compression reduces file sizes without significant quality loss\n- Lazy loading defers off-screen image loading, improving initial page load time and Largest Contentful Paint (LCP)\n- These are client-side optimizations independent of server caching\n\nWhy B is wrong: The question states caching mechanisms are already in place. FPC is a caching mechanism, so recommending it is redundant.\n\nWhy C is wrong: While CDN is a valid optimization, it is more of a server/infrastructure optimization. The question states server resources are already optimized, making CDN less relevant as an additional step compared to frontend optimizations.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "performance-optimization",
+      "frontend-architecture",
+      "scalability"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 226,
+    "category": "API & Web Services",
+    "difficulty": "Medium",
+    "question": "As part of a project's demands, you are tasked with setting up a new integration to allow third-party services to utilize the Adobe Commerce and Magento Open Source web APIs. Which configuration file should be created within the module to define the API resources accessible by the integration?",
+    "options": [
+      {
+        "id": "A",
+        "text": "etc/acl.xml"
+      },
+      {
+        "id": "B",
+        "text": "etc/integration.xml"
+      },
+      {
+        "id": "C",
+        "text": "etc/api.xml"
+      },
+      {
+        "id": "D",
+        "text": "etc/integration/api.xml"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct. When setting up a new integration in Adobe Commerce, the integration configuration is defined in etc/integration.xml. This file specifies the integration name, email, and the API resources it can access.\n\nWhy others are incorrect:\n- A (etc/webapi.xml): This file defines web API routes and service class mappings, not integration configurations.\n- C (etc/config.xml): This file is for default system configuration values, not integration setup.\n- D (etc/integration/api.xml): While api.xml within the integration directory defines API resource access permissions, the primary integration configuration file is etc/integration.xml.",
+    "codeExample": "<!-- etc/integration/config.xml - Define integration properties -->\n<integrations>\n    <integration name=\"ThirdPartyErp\">\n        <email>admin@example.com</email>\n        <endpoint_url>https://erp.example.com/callback</endpoint_url>\n        <identity_link_url>https://erp.example.com/identity</identity_link_url>\n    </integration>\n</integrations>\n\n<!-- etc/integration/api.xml - Define API resources for the integration -->\n<integrations>\n    <integration name=\"ThirdPartyErp\">\n        <resources>\n            <resource name=\"Magento_Catalog::catalog\"/>\n            <resource name=\"Magento_Sales::sales\"/>\n            <resource name=\"Magento_Customer::customer\"/>\n        </resources>\n    </integration>\n</integrations>\n\n<!-- etc/acl.xml (separate concern - defines the ACL tree) -->\n<acl>\n    <resources>\n        <resource id=\"Magento_Backend::admin\">\n            <resource id=\"Magento_Catalog::catalog\" title=\"Catalog\"/>\n        </resource>\n    </resources>\n</acl>",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "api-design",
+      "integration-patterns",
+      "xml-configuration"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 227,
+    "category": "B2B Features",
+    "difficulty": "Medium",
+    "question": "A client gave an Adobe Commerce architect a list of the company's previous users whose accounts are no longer required to be kept on the company site. The architect removed those accounts. Which two changes would happen after deleting those accounts? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "The system will remove the deleted users' sales order quotes."
+      },
+      {
+        "id": "B",
+        "text": "If the specified company user has child users, the system re-assigns the child users to the parent of the deleted user."
+      },
+      {
+        "id": "C",
+        "text": "The system locks the deleted users' sales order quotes and changes their status to Closed"
+      },
+      {
+        "id": "D",
+        "text": "If the specified company user has child users, the system re-assigns the child users to the Admin user."
+      }
+    ],
+    "correctAnswers": [
+      "C",
+      "B"
+    ],
+    "explanation": "When a company user is deleted in Adobe Commerce B2B, two important behaviors occur to preserve data integrity and organizational structure.\n\nWhy C is correct:\n- Sales order quotes associated with the deleted user are not removed (to preserve business records)\n- Instead, the system locks these quotes and changes their status to Closed\n- This ensures historical order data remains intact for reporting and auditing\n- Locked quotes cannot be modified or reactivated\n\nWhy B is correct:\n- Company users exist in a hierarchical tree structure\n- When a user with subordinates (child users) is deleted, the system must preserve the hierarchy\n- Child users are re-assigned to the deleted user's parent, maintaining the chain of command\n- This prevents orphaned users from losing their position in the approval and permission hierarchy\n\nWhy A is wrong: Quotes are never deleted when a user is removed. They are locked and closed to preserve business records and audit trails.\n\nWhy D is wrong: Child users are re-assigned to the deleted user's parent in the hierarchy, not to the Admin user. Re-assigning all orphaned users to the Admin would flatten the organizational structure and break role-based permissions.",
+    "codeExample": null,
+    "examDomain": "Design",
+    "objectiveTags": [
+      "b2b",
+      "company-accounts",
+      "order-management"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 228,
+    "category": "Multi-site Architecture",
+    "difficulty": "Medium",
+    "question": "A client has a requirement to create an additional regional website in the UK, with the currency in GBP. There is an existing US website with the default currency in USD. After the store launch of the new UK website, the administrator noticed the Sales Total Report is showing 0.00. How can an Adobe Commerce Architect resolve this issue?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Configure currency rates for GBP and USD"
+      },
+      {
+        "id": "B",
+        "text": "Refresh Statistics for Total Invoice"
+      },
+      {
+        "id": "C",
+        "text": "Confirm all Orders are Shipped"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct. When creating an additional regional website for the UK, you need to configure currency rates for GBP and USD to ensure proper currency conversion between the UK website (GBP) and the default store (USD). This is essential for accurate pricing across different regional store views.\n\nWhy others are incorrect:\n- B (Refresh Statistics for Total Invoice): Statistics refresh is for reporting purposes and not related to setting up a new regional website.\n- C: Not directly related to the core requirement of adding a UK regional website.\n- D: Not a primary step for regional website configuration.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "multi-site",
+      "scope-hierarchy",
+      "admin-configuration"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 229,
+    "category": "API & Web Services",
+    "difficulty": "Hard",
+    "question": "When using the API integration, a merchant is unable to perform actions that require a permission level higher than anonymous. They receive the error message: \"The consumer isn't authorized to access %resources\". Full permissions are given to this integration, it is active, and the access token is used in the authentication header. What is the recommended way to resolve this issue?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Set Stores > Configuration > Services > OAuth > Consumer Settings > 'Allow OAuth Access Tokens to be used as standalone Bearer tokens' option to \"Yes\""
+      },
+      {
+        "id": "B",
+        "text": "Request an access token using one of these endpoints: GET /V1/integration/admin/token or GET /V1/integration/customer/token"
+      },
+      {
+        "id": "C",
+        "text": "Use OAuth-based authentication and utilize generated consumer key, consumer secret, access token, and access token secret"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct. Using OAuth-based authentication with generated consumer key, consumer secret, access token, and token secret is the proper approach for API integration when the merchant needs to perform actions requiring admin permissions. OAuth provides secure, role-based access to the API.\n\nWhy others are incorrect:\n- A (OAuth Consumer Settings): Adjusting consumer settings doesn't solve the underlying authentication issue — the integration needs proper OAuth credentials.\n- B (Request access token via endpoints): This approach is for token-based authentication, which has limitations compared to full OAuth integration for admin-level actions.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "oauth-configuration",
+      "api-authentication",
+      "integration-setup"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 230,
+    "category": "Dependency Injection",
+    "difficulty": "Medium",
+    "question": "A developer needs to add a class name resolution for the SearchCriteriaBuilder. What is the recommended way to achieve this goal?",
+    "options": [
+      {
+        "id": "A",
+        "text": "$this->get(SearchCriteriaBuilder::class);"
+      },
+      {
+        "id": "B",
+        "text": "$this->get('\\Magento\\Framework\\Api\\SearchCriteriaBuilder');"
+      },
+      {
+        "id": "C",
+        "text": "$this->get('SearchCriteriaBuilder');"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct. Using the ::class constant (e.g., SearchCriteriaBuilder::class) is the recommended approach for class name resolution in Magento 2. It returns the fully qualified class name as a string, provides IDE support for refactoring and navigation, catches typos at compile time, and works with PHP's autoloading and use statements.\n\nB is wrong because using a hardcoded string with the full namespace path is fragile. It won't trigger IDE errors if the class is renamed or moved, is prone to typos, and doesn't benefit from use-statement imports.\n\nC is wrong because using just the short class name as a string won't resolve to the correct fully qualified class name. The ObjectManager/DI container needs the full class name to locate and instantiate the correct class.",
+    "codeExample": "<?php\nuse Magento\\Framework\\Api\\SearchCriteriaBuilder;\n\n// Recommended: ::class constant\n$searchCriteriaBuilder = $this->get(SearchCriteriaBuilder::class);\n\n// SearchCriteriaBuilder::class resolves to:\n// 'Magento\\Framework\\Api\\SearchCriteriaBuilder'\n// at compile time, not runtime",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "class-resolution",
+      "coding-standards",
+      "dependency-injection"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 231,
+    "category": "Testing",
+    "difficulty": "Medium",
+    "question": "A developer is writing integration tests for an application where the objects are needed to be modified intentionally within the test case. As an Adobe Commerce Architect, what should you recommend be used?",
+    "options": [
+      {
+        "id": "A",
+        "text": "@magentoAppIsolation"
+      },
+      {
+        "id": "B",
+        "text": "@magentoAppArea"
+      },
+      {
+        "id": "C",
+        "text": "@magentoDbIsolation"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "A is correct. The @magentoAppIsolation annotation ensures that each test runs in an isolated application state. When objects are managed by the Object Manager through shared/singleton instances, app isolation ensures each test gets a fresh application instance, preventing test interdependencies.\n\nWhy others are incorrect:\n- B (@magentoAppArea): This annotation sets the application area (frontend, adminhtml, etc.) but doesn't provide isolation between tests.\n- C (@magentoDbIsolation): This annotation handles database transaction isolation (rolling back DB changes after each test) but doesn't address Object Manager singleton state.",
+    "codeExample": "<?php\nnamespace Vendor\\Module\\Test\\Integration;\n\n/**\n * @magentoDbIsolation enabled\n */\nclass ProductModificationTest extends \\PHPUnit\\Framework\\TestCase\n{\n    /**\n     * @magentoDataFixture Magento/Catalog/_files/product_simple.php\n     */\n    public function testModifyProduct(): void\n    {\n        $objectManager = \\Magento\\TestFramework\\Helper\\Bootstrap::getObjectManager();\n        $productRepository = $objectManager->get(\\Magento\\Catalog\\Api\\ProductRepositoryInterface::class);\n        \n        $product = $productRepository->get('simple');\n        $product->setPrice(99.99);\n        $productRepository->save($product);\n        \n        // Assertion works within this test\n        $updated = $productRepository->get('simple');\n        $this->assertEquals(99.99, $updated->getPrice());\n        \n        // After test: DB transaction is rolled back automatically\n    }\n}",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "testing-strategy",
+      "integration-tests",
+      "test-isolation"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 232,
+    "category": "Adobe Commerce Cloud",
+    "difficulty": "Medium",
+    "question": "A project manager enabled Product Recommendations for the staging environment. All tests have been completed, and the configuration was deployed to the production environment, but the recommendations are not showing on Production. What is the first step to troubleshoot this issue?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Check that the development team uses the correct Services Connector settings for their local environment"
+      },
+      {
+        "id": "B",
+        "text": "Synchronize Catalog to export product data from the Commerce server to Commerce Services"
+      },
+      {
+        "id": "C",
+        "text": "Check that the Commerce Services Connector configuration uses production keys"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct. The Commerce Services Connector requires separate API keys for staging and production environments. When deploying from staging to production, the most common issue is that the connector is still configured with staging/sandbox API keys. The first troubleshooting step should always be verifying that production SaaS environment keys are properly configured in the Commerce Services Connector settings.\n\nA is wrong because local development environment settings are irrelevant to the production environment issue. Local settings don't affect production configuration.\n\nB is wrong because while catalog synchronization is necessary for Product Recommendations to work, it's not the first step. If the Services Connector is pointing to the wrong environment (staging keys on production), synchronizing the catalog would send data to the wrong SaaS environment. You must first verify the correct keys are in place.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "saas-services",
+      "environment-configuration",
+      "product-recommendations"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 233,
+    "category": "Code Review & Refactoring",
+    "difficulty": "Medium",
+    "question": "An Adobe Commerce Architect wanted to check the coding standard for a module and found the error in Mess Detector: \"Consider reducing the number of public items to less than 45.\" What should the architect consider as a reason for this error?",
+    "options": [
+      {
+        "id": "A",
+        "text": "ExcessiveMethodLength"
+      },
+      {
+        "id": "B",
+        "text": "ExcessivePublicCount"
+      },
+      {
+        "id": "C",
+        "text": "ExcessiveParameterList"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct. The PHP Mess Detector (PHPMD) rule ExcessivePublicCount fires when a class has too many public methods and properties. The default threshold is 45 public items. This is a code smell indicating the class likely violates the Single Responsibility Principle and should be decomposed into smaller, more focused classes.\n\nA is wrong because ExcessiveMethodLength is a different PHPMD rule that checks the number of lines within a single method, not the count of public items on a class. Its error message references method length, not public item count.\n\nC is wrong because ExcessiveParameterList checks the number of parameters on a single method/function (default threshold is typically 10). It has nothing to do with the total number of public items on a class.",
+    "codeExample": null,
+    "examDomain": "Review",
+    "objectiveTags": [
+      "coding-standards",
+      "phpmd",
+      "code-quality"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 234,
+    "category": "JavaScript & Frontend",
+    "difficulty": "Medium",
+    "question": "A junior developer needs to analyze and debug their code. To get guidance, they work with the Architect to understand how to best perform JavaScript analysis on Adobe Commerce. What should the Architect recommend using?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Grunt"
+      },
+      {
+        "id": "B",
+        "text": "JSCS package"
+      },
+      {
+        "id": "C",
+        "text": "ESLint"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct. ESLint is the recommended tool for JavaScript static analysis in Adobe Commerce. It identifies problematic patterns, enforces coding standards, and catches potential bugs. Adobe Commerce includes ESLint configuration (.eslintrc) with Magento-specific rules. It is the current industry standard for JavaScript code analysis and is actively maintained.\n\nA is wrong because Grunt is a task runner, not a JavaScript code analysis tool. While Adobe Commerce uses Grunt for tasks like compiling LESS files and deploying static content, it does not perform static code analysis or help debug JavaScript code quality issues.\n\nB is wrong because JSCS (JavaScript Code Style) was a code style linter that has been deprecated and merged into ESLint. The JSCS project officially ended in 2016, and all its rules are available as ESLint plugins. Using a deprecated tool is not recommended.",
+    "codeExample": null,
+    "examDomain": "Review",
+    "objectiveTags": [
+      "javascript-tooling",
+      "coding-standards",
+      "static-analysis"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 235,
+    "category": "Caching",
+    "difficulty": "Hard",
+    "question": "An Adobe Commerce store merchant is experiencing page speed issues. After investigating, they discover that the X-Cache header is MISS on requests. What are the two possible reasons causing this issue? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "In the response header, the X-Magento-Tags does not exist"
+      },
+      {
+        "id": "B",
+        "text": "In the response header, the Pragma:cache is set"
+      },
+      {
+        "id": "C",
+        "text": "In the response header, the Cache-Control: max-age=value, where value is greater than 0"
+      },
+      {
+        "id": "D",
+        "text": "In the response header, the Pragma:no-cache is set"
+      }
+    ],
+    "correctAnswers": [
+      "B",
+      "A"
+    ],
+    "explanation": "A and B are correct. When debugging page speed issues:\n- A (configure built-in profiler): The Magento built-in profiler helps identify performance bottlenecks by measuring execution time of code blocks.\n- B (check Pragma:cache header): The response header Pragma:cache-id helps identify whether full-page cache is working correctly, which directly impacts page speed.\n\nWhy others are incorrect:\n- C: Not the most effective initial diagnostic approach for page speed issues.\n- D: Not a primary debugging tool for identifying the root cause of page speed problems.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cache-invalidation",
+      "fastly-varnish",
+      "http-headers"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 236,
+    "category": "Adobe Commerce Cloud",
+    "difficulty": "Medium",
+    "question": "A client informed a development team that suddenly data export-import services stopped working on his Adobe Commerce Cloud website. The Adobe Commerce Architect found out that cron jobs stopped working in the cloud server. How can the Architect address this?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Enter the admin panel and restart the specific cron jobs manually."
+      },
+      {
+        "id": "B",
+        "text": "Enter the SSH environment and run the cron:unlock command."
+      },
+      {
+        "id": "C",
+        "text": "Create a support ticket to the Adobe team immediately."
+      },
+      {
+        "id": "D",
+        "text": "Enter the SSH environment and run the cron:reset command."
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct. When cron jobs stop working on Adobe Commerce Cloud, the most common cause is stuck/locked cron processes. The bin/magento cron:unlock command releases locked cron jobs so they can run again. You SSH into the cloud environment and execute this command to clear the locks from the cron_schedule table.\n\nA is wrong because there is no built-in admin panel functionality to restart individual cron jobs. The admin panel shows cron schedule status but doesn't provide restart controls for stuck jobs.\n\nC is wrong because creating a support ticket should not be the first action. This is a common operational issue that can be resolved by the development team directly via SSH without waiting for Adobe support.\n\nD is wrong because there is no cron:reset command in the Magento CLI. The correct command is cron:unlock. Other related commands are cron:run (to execute cron) and cron:install (to set up crontab), but cron:reset does not exist.",
+    "codeExample": "# SSH into Adobe Commerce Cloud environment\nmagento-cloud ssh -e production\n\n# Check cron status\nbin/magento cron:unlock\n\n# Verify cron is running again\nbin/magento cron:run",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cron-management",
+      "cloud-ops",
+      "troubleshooting"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 237,
+    "category": "Elasticsearch",
+    "difficulty": "Hard",
+    "question": "A client is struggling with ineffective search functionality, leading to poor user experience and reduced conversion rates. As an Adobe Commerce Architect, you are tasked with enhancing the search functionality to provide relevant and accurate results. What should you do to achieve this goal?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Implement full-text search capabilities to enable natural language search queries."
+      },
+      {
+        "id": "B",
+        "text": "Integrate search analytics to understand user behavior and optimize search algorithms."
+      },
+      {
+        "id": "C",
+        "text": "Utilize search relevancy algorithms to rank results based on user intent and product attributes."
+      },
+      {
+        "id": "D",
+        "text": "Employ search autocomplete and synonym suggestions to guide users and improve search efficiency."
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "B is correct. Integrating search analytics to understand user behavior and optimize search algorithms is the most effective approach because it creates a data-driven feedback loop. By analyzing what users search for, which results they click, and what they ultimately purchase, you can continuously tune the search engine's ranking algorithms. In Adobe Commerce with Elasticsearch/OpenSearch, this means using analytics data to adjust attribute weights, boost rules, and relevancy parameters based on actual user behavior.\n\nWhy others are incorrect:\n- A (full-text search): Already a built-in capability of Elasticsearch/OpenSearch in Adobe Commerce. Enabling it alone doesn't solve the core problem of result relevancy.\n- C (relevancy algorithms): While relevancy tuning is important, without analytics data to inform the tuning, you're making blind adjustments. Analytics-driven optimization is the foundation that makes relevancy tuning effective.\n- D (autocomplete/synonyms): These improve search input efficiency but don't address the core issue of result quality.",
+    "codeExample": null,
+    "examDomain": "Design",
+    "objectiveTags": [
+      "search-architecture",
+      "elasticsearch",
+      "user-experience"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 238,
+    "category": "Performance",
+    "difficulty": "Medium",
+    "question": "In which two ways can the storefront responsiveness of the Commerce Instance be improved? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Configure asynchronous indexing as disable"
+      },
+      {
+        "id": "B",
+        "text": "Configure asynchronous indexing as enable"
+      },
+      {
+        "id": "C",
+        "text": "Minify CSS, JavaScript and HTML files, and disable JavaScript bundling"
+      },
+      {
+        "id": "D",
+        "text": "Minify CSS, JavaScript and HTML files, and Enable JavaScript bundling"
+      }
+    ],
+    "correctAnswers": [
+      "D",
+      "B"
+    ],
+    "explanation": "B and D are correct. To improve storefront responsiveness:\n- B (Configure asynchronous indexing as enable): Async indexing prevents index updates from blocking storefront requests, improving response times during catalog changes.\n- D (Minify CSS, JavaScript and HTML files, and Enable JavaScript bundling): Minification reduces file sizes and bundling reduces HTTP requests, both directly improving page load performance.\n\nWhy others are incorrect:\n- A (async indexing as disable): Disabling async indexing makes it synchronous, which blocks storefront requests during reindexing — the opposite of what you want.\n- C (disable JavaScript bundling): Disabling bundling increases the number of HTTP requests, which can slow down page loads.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "indexing",
+      "frontend-optimization",
+      "performance-tuning"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 239,
+    "category": "Security",
+    "difficulty": "Hard",
+    "question": "A client is facing a growing threat of cyberattacks and data breaches. As an Adobe Commerce architect, you are tasked with implementing robust security measures to protect the store's data and maintain customer trust. What is the most effective way to achieve this goal?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Regularly update Adobe Commerce and all extensions to the latest versions"
+      },
+      {
+        "id": "B",
+        "text": "Utilize a web application firewall (WAF) to filter malicious traffic and protect against common attacks"
+      },
+      {
+        "id": "C",
+        "text": "Encrypt sensitive data, such as customer information and payment details, at rest and in transit"
+      },
+      {
+        "id": "D",
+        "text": "Implement strong password policies and enforce multi-factor authentication (MFA)"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "C is correct. Encrypting sensitive data such as customer information and payment details is the most critical step when facing growing cyber threats. Data encryption ensures that even if attackers breach the system, the stolen data remains unreadable without the encryption keys.\n\nWhy others are incorrect:\n- A: While important, this is not as fundamental as encrypting sensitive data at rest.\n- B: A useful security measure but secondary to data encryption.\n- D: Important for monitoring but doesn't directly protect data from breaches.",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "security-hardening",
+      "authentication",
+      "mfa"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 240,
+    "category": "GraphQL",
+    "difficulty": "Hard",
+    "question": "An external integration is using a GraphQL API to communicate with an Adobe Commerce application. The application is configured to use the Fastly service. Which header should be handled by Fastly VCL so that the GraphQL request can be cached?",
+    "options": [
+      {
+        "id": "A",
+        "text": "X-Magento-Vary"
+      },
+      {
+        "id": "B",
+        "text": "X-Magento-Cache-Id"
+      },
+      {
+        "id": "C",
+        "text": "Authorization Bearer"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "For GraphQL caching with Fastly, the X-Magento-Cache-Id header is critical.\n\nWhy B is correct:\n- X-Magento-Cache-Id is a unique hash generated from the GraphQL query, variables, store context, and currency\n- Fastly VCL must use this header to create unique cache keys for different GraphQL requests\n- Without it, Fastly cannot differentiate between distinct GraphQL POST requests since they all hit the same /graphql endpoint\n- Adobe Commerce generates this header specifically for CDN/Fastly cache discrimination\n\nWhy others are incorrect:\n- A: X-Magento-Vary handles customer segment/group variations for page cache, not GraphQL-specific caching\n- C: Authorization Bearer is an authentication token — it should NOT be cached and must be stripped before caching to avoid serving authenticated responses to other users",
+    "codeExample": "# Fastly VCL snippet for GraphQL caching\n# In vcl_hash, use X-Magento-Cache-Id to build cache key:\n\nsub vcl_hash {\n    if (req.url ~ \"/graphql\") {\n        # X-Magento-Cache-Id contains hash of:\n        # - GraphQL query body\n        # - Store code, currency, content-currency\n        # - Customer group\n        hash_data(req.http.X-Magento-Cache-Id);\n        return(lookup);\n    }\n}",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "graphql",
+      "caching-strategy",
+      "fastly-cdn",
+      "headless"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 241,
+    "category": "GraphQL",
+    "difficulty": "Medium",
+    "question": "There is a custom contact form in the storefront that contains CAPTCHA/reCAPTCHA, which needs to be submitted through GraphQL. In this case, what needs to be included in the HTTP Header for protected mutation API calls along with Admin or Bearer token?",
+    "options": [
+      {
+        "id": "A",
+        "text": "X-Captcha/X-ReCaptcha"
+      },
+      {
+        "id": "B",
+        "text": "Integration authorization tokens"
+      },
+      {
+        "id": "C",
+        "text": "OAuth Token"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "When submitting GraphQL mutations that are protected by CAPTCHA or reCAPTCHA, the validation token must be passed via HTTP headers.\n\nWhy A is correct:\n- Adobe Commerce requires X-ReCaptcha header for reCAPTCHA-protected GraphQL mutations\n- The header carries the reCAPTCHA response token generated by the frontend widget\n- The server validates this token against Google's reCAPTCHA API before processing the mutation\n- This is documented in Adobe Commerce's GraphQL security implementation for storefront forms\n\nWhy others are incorrect:\n- B: Integration authorization tokens are for system-to-system API authentication, not for CAPTCHA validation on storefront forms\n- C: OAuth tokens handle authentication/authorization, not bot protection — CAPTCHA serves an entirely different security purpose",
+    "codeExample": "// GraphQL mutation with reCAPTCHA header\nfetch('/graphql', {\n    method: 'POST',\n    headers: {\n        'Content-Type': 'application/json',\n        'Authorization': 'Bearer <customer_token>',\n        'X-ReCaptcha': recaptchaResponseToken  // From reCAPTCHA widget\n    },\n    body: JSON.stringify({\n        query: `mutation {\n            contactUs(input: {\n                name: \"John\"\n                email: \"john@example.com\"\n                comment: \"Question about order\"\n            }) {\n                status\n            }\n        }`\n    })\n});",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "graphql",
+      "security",
+      "headless",
+      "recaptcha"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 242,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Medium",
+    "question": "A client reports that a product image is not appearing when a product is added to the cart. After debugging, the Adobe Commerce Architect discovers that this issue is specific to configurable products. How should the issue be resolved?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Advise the business to upload a photo of all the variants."
+      },
+      {
+        "id": "B",
+        "text": "In the Admin, for the configurable product image, set it to the parent thumbnail within the cart."
+      },
+      {
+        "id": "C",
+        "text": "In the Admin, for the configurable product image, set it to the product thumbnail within the cart."
+      },
+      {
+        "id": "D",
+        "text": "Develop a customization to display the variant image instead of the configurable product image."
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "Adobe Commerce has a built-in admin setting that controls which thumbnail image displays in the cart for configurable products.\n\nWhy C is correct:\n- Under Stores > Configuration > Sales > Checkout > Shopping Cart, the \"Configurable Product Image\" setting controls cart thumbnails\n- Setting it to \"Product Thumbnail Itself\" uses the simple (child) product's own image in the cart\n- This is the correct approach because it uses the selected variant's actual thumbnail, which reflects what the customer chose\n- This is a native configuration — no custom development needed\n\nWhy others are incorrect:\n- A: Uploading images for all variants is a content management task, not a configuration fix — images may already exist but the system isn't configured to use them\n- B: \"Parent thumbnail\" would show the configurable product's image, not the selected variant's image — this is the opposite of what the customer expects to see\n- D: Custom development is unnecessary when Adobe Commerce already provides this configuration out of the box",
+    "codeExample": null,
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "catalog-modeling",
+      "configurable-products",
+      "admin-configuration"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 243,
+    "category": "GraphQL",
+    "difficulty": "Hard",
+    "question": "For Adobe Commerce's GraphQL APIs, how should an architect optimize data transformation performance while dealing with large datasets?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Implementing query batching to reduce round-trips"
+      },
+      {
+        "id": "B",
+        "text": "Applying compression algorithms to reduce payload size"
+      },
+      {
+        "id": "C",
+        "text": "Using edge computing for data localization"
+      },
+      {
+        "id": "D",
+        "text": "Employing serverless computing for parallel processing"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "Query batching is the most effective GraphQL-specific technique for optimizing data transformation with large datasets.\n\nWhy A is correct:\n- Query batching combines multiple GraphQL queries into a single HTTP request, drastically reducing network round-trips\n- Adobe Commerce's GraphQL implementation supports batched queries natively\n- Reduces overhead from repeated HTTP connections, authentication checks, and framework bootstrapping\n- The DataLoader pattern (used internally) batches and deduplicates database queries across batched requests\n- Directly addresses data transformation performance by processing related data in bulk\n\nWhy others are incorrect:\n- B: Compression (gzip/brotli) reduces transfer size but doesn't optimize data transformation or query execution performance — it's a transport-layer optimization\n- C: Edge computing helps with latency and localization but doesn't optimize how Adobe Commerce transforms and resolves GraphQL data internally\n- D: Serverless computing is an infrastructure pattern unrelated to Adobe Commerce's GraphQL resolver architecture — Magento processes requests in a single PHP process",
+    "codeExample": "// Batched GraphQL request — single HTTP call, multiple queries\nfetch('/graphql', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify([\n        {\n            query: `{ products(filter: {category_id: {eq: \"10\"}}) {\n                items { sku name price_range { minimum_price { final_price { value } } } }\n            }}`\n        },\n        {\n            query: `{ categories(filters: {parent_id: {in: [\"2\"]}}) {\n                items { id name children_count }\n            }}`\n        },\n        {\n            query: `{ cmsBlocks(identifiers: [\"homepage-banner\"]) {\n                items { identifier content }\n            }}`\n        }\n    ])\n});",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "graphql",
+      "performance-optimization",
+      "headless",
+      "api-design"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 244,
+    "category": "Caching",
+    "difficulty": "Medium",
+    "question": "Which two caching options for performance optimization are available in Magento? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Redis database for storing entire cache"
+      },
+      {
+        "id": "B",
+        "text": "Opcode cache for storing data in the memory"
+      },
+      {
+        "id": "C",
+        "text": "File system cache for storing static files"
+      },
+      {
+        "id": "D",
+        "text": "Full Page Cache for preserving output HTML of the pages"
+      }
+    ],
+    "correctAnswers": [
+      "B",
+      "D"
+    ],
+    "explanation": "Magento leverages both PHP opcode caching and Full Page Cache as core performance optimization mechanisms.\n\nWhy B is correct:\n- OPcache (opcode cache) compiles PHP scripts into bytecode and stores them in shared memory\n- Eliminates the need to parse and compile PHP files on every request\n- Magento explicitly recommends enabling OPcache for performance\n- Stores compiled bytecode in memory, not raw data — this is a PHP-level optimization\n\nWhy D is correct:\n- Full Page Cache (FPC) stores the complete rendered HTML output of pages\n- Subsequent requests serve the cached HTML directly, bypassing PHP execution and database queries\n- Can use built-in file/database storage or Varnish as the FPC backend\n- Dramatically reduces server load and response time for cacheable pages\n\nWhy others are incorrect:\n- A: Redis is used as a cache backend (for session storage and cache storage), not as a standalone caching option — it's an implementation detail, not a caching type. Redis stores cache entries, not the \"entire cache\" as a distinct optimization technique\n- C: Magento does not have a \"file system cache for storing static files\" as a caching type — static content deployment and serving is handled by the web server and CDN, not by a Magento cache type",
+    "codeExample": "# php.ini — Enable OPcache\nopcache.enable=1\nopcache.memory_consumption=512\nopcache.max_accelerated_files=60000\nopcache.validate_timestamps=0  # Disable in production\n\n# env.php — Full Page Cache with Varnish backend\n'cache' => [\n    'frontend' => [\n        'page_cache' => [\n            'backend' => 'Magento\\Framework\\Cache\\Backend\\Redis',\n            'backend_options' => [\n                'server' => 'redis',\n                'port' => '6379',\n                'database' => '1'\n            ]\n        ]\n    ]\n],\n'http_cache_hosts' => [\n    ['host' => 'varnish', 'port' => '80']\n]",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "caching-strategy",
+      "performance-optimization",
+      "fpc-varnish",
+      "server-configuration"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 245,
+    "category": "Admin Customization",
+    "difficulty": "Hard",
+    "question": "A new custom column has been added in the sales order grid to display applied coupon data. When the Admin tries to filter the grid using the custom column, the grid throws an error. How should the Architect fix the error to make the column filterable?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Modify the collection query and group by the custom column."
+      },
+      {
+        "id": "B",
+        "text": "Add addFieldToFilter on the collection."
+      },
+      {
+        "id": "C",
+        "text": "Add addFilterToMap on the collection."
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "When custom columns in the sales order grid cause filtering errors, the issue is typically an ambiguous column name in the SQL query. addFilterToMap resolves this.\n\nWhy C is correct:\n- The sales order grid uses a flat table (sales_order_grid) that is joined with other tables\n- When filtering on a custom column that exists in multiple joined tables, MySQL throws an \"ambiguous column\" error\n- addFilterToMap maps the filter field name to a specific table.column reference, eliminating ambiguity\n- This is the standard Magento pattern for resolving grid filter issues with joined or custom columns\n\nWhy others are incorrect:\n- A: Adding GROUP BY would change the query semantics and could cause incorrect aggregation — it doesn't solve column ambiguity in WHERE clauses\n- B: addFieldToFilter adds a filter condition to the collection but does NOT resolve the ambiguous column reference — it would still produce the same SQL error",
+    "codeExample": "// In your custom Grid Collection class\nprotected function _initSelect()\n{\n    parent::_initSelect();\n\n    // Map the custom column to its fully-qualified table.column\n    // This prevents \"ambiguous column\" errors when filtering\n    $this->addFilterToMap(\n        'coupon_code',\n        'sales_order.coupon_code'\n    );\n\n    // Join the data for the custom column\n    $this->getSelect()->joinLeft(\n        ['sales_order' => $this->getTable('sales_order')],\n        'main_table.entity_id = sales_order.entity_id',\n        ['coupon_code']\n    );\n\n    return $this;\n}",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "admin-ui",
+      "ui-components",
+      "database",
+      "troubleshooting"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 246,
+    "category": "Performance",
+    "difficulty": "Medium",
+    "question": "What are two techniques and strategies that can be employed to optimize the performance of a Magento product page view? (Choose two.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "Enabling all available cache types and using opcode caching for PHP scripts"
+      },
+      {
+        "id": "B",
+        "text": "Optimizing database queries by using indexing, reducing join queries, and avoiding excessive use of EAV attributes"
+      },
+      {
+        "id": "C",
+        "text": "Storing all JavaScript and CSS files locally on the server to reduce external requests"
+      },
+      {
+        "id": "D",
+        "text": "Use synchronous requests to the third-party services"
+      }
+    ],
+    "correctAnswers": [
+      "A",
+      "B"
+    ],
+    "explanation": "Enabling caches with opcode caching and optimizing database queries are the two most impactful strategies for product page performance.\n\nWhy A is correct:\n- Enabling all cache types (config, layout, block HTML, FPC, etc.) eliminates redundant processing on repeated requests\n- OPcache compiles PHP to bytecode in memory, removing parsing/compilation overhead on every request\n- Combined, these address both application-level and PHP-level performance bottlenecks\n- Magento has 15+ cache types that each target specific expensive operations\n\nWhy B is correct:\n- Proper indexing (flat tables, custom indexes) speeds up product data retrieval dramatically\n- Reducing join queries simplifies SQL execution plans — EAV tables require many joins by default\n- Avoiding excessive EAV attributes reduces the number of JOINs needed to load a product entity\n- These are the most common database-level bottlenecks on product pages\n\nWhy others are incorrect:\n- C: Storing JS/CSS locally doesn't reduce external requests meaningfully — CDNs serve static assets faster than local servers. Magento's bundling/minification features are the correct approach for static asset optimization\n- D: Synchronous third-party requests BLOCK page rendering and increase response time — asynchronous requests (AJAX, deferred loading) are the correct pattern",
+    "codeExample": "# Enable all cache types\nbin/magento cache:enable\n\n# Verify cache status\nbin/magento cache:status\n\n# php.ini OPcache settings for Magento\nopcache.enable=1\nopcache.memory_consumption=512\nopcache.max_accelerated_files=60000\n\n# Reindex for optimized flat tables\nbin/magento indexer:reindex\n\n# Check slow queries\nSET GLOBAL slow_query_log = 'ON';\nSET GLOBAL long_query_time = 1;",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "performance-optimization",
+      "caching-strategy",
+      "database",
+      "scalability"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 247,
+    "category": "Code Architecture",
+    "difficulty": "Medium",
+    "question": "When refactoring Adobe Commerce customizations, which design pattern promotes loose coupling and flexibility by allowing objects to communicate without direct references?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Singleton Pattern"
+      },
+      {
+        "id": "B",
+        "text": "Proxy Pattern"
+      },
+      {
+        "id": "C",
+        "text": "Observer Pattern"
+      },
+      {
+        "id": "D",
+        "text": "Command Pattern"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "The Observer Pattern is the design pattern that specifically enables loose coupling by allowing objects to communicate through events without direct references to each other.\n\nWhy C is correct:\n- The Observer Pattern decouples the event dispatcher (subject) from the event handlers (observers)\n- Objects publish events without knowing who listens — observers subscribe without knowing who dispatches\n- In Magento 2, this is implemented via events.xml and observer classes\n- Promotes the Open/Closed Principle: extend behavior without modifying existing code\n- Core Magento dispatches 500+ events that modules can observe without coupling to core classes\n\nWhy others are incorrect:\n- A: Singleton Pattern ensures a single instance of a class — it controls object lifecycle, not communication. It actually increases coupling since classes depend on the singleton directly\n- B: Proxy Pattern wraps an object to control access (lazy loading, access control) — both the proxy and client reference the same interface, creating a direct dependency chain\n- D: Command Pattern encapsulates a request as an object for queuing/undo — while it decouples invoker from receiver, the invoker still holds a direct reference to the command object",
+    "codeExample": "<!-- events.xml — Observer subscribes without knowing the dispatcher -->\n<event name=\"sales_order_place_after\">\n    <observer name=\"custom_order_notification\"\n              instance=\"Vendor\\Module\\Observer\\OrderPlacedNotification\" />\n</event>\n\n// Observer handles event without direct reference to Order model\nclass OrderPlacedNotification implements ObserverInterface\n{\n    public function __construct(\n        private NotificationService $notificationService\n    ) {}\n\n    public function execute(Observer $observer)\n    {\n        $order = $observer->getEvent()->getOrder();\n        $this->notificationService->sendOrderConfirmation($order);\n    }\n}\n\n// Dispatcher doesn't know about observers\n$this->eventManager->dispatch('sales_order_place_after', ['order' => $order]);",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "design-patterns",
+      "events-observers",
+      "code-quality",
+      "loose-coupling"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 248,
+    "category": "Service Contracts",
+    "difficulty": "Medium",
+    "question": "In the context of module development, describe the role of a \"Service Contract\" and elaborate on how it contributes to the overall development practice.",
+    "options": [
+      {
+        "id": "A",
+        "text": "A \"Service Contract\" is a Magento extension that handles web services and API calls for third-party integrations"
+      },
+      {
+        "id": "B",
+        "text": "A \"Service Contract\" is a set of interfaces and classes that define the interactions between different layers of the application, promoting separation of concerns and modularity"
+      },
+      {
+        "id": "C",
+        "text": "A \"Service Contract\" is a formal agreement between Magento developers and clients to provide ongoing support for a module"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "Service Contracts in Magento 2 are a set of PHP interfaces that define the public API for a module, creating a stable contract between modules.\n\nWhy B is correct:\n- Service Contracts consist of Data interfaces (defining data structures) and Service interfaces (defining business operations)\n- They create an abstraction layer between modules, so implementation details can change without breaking consumers\n- Promote separation of concerns: presentation layer uses service interfaces, not repository/model internals\n- Enable modularity: modules depend on interfaces, not concrete classes, making them independently replaceable\n- Automatically exposed as REST/SOAP Web APIs via webapi.xml without additional code\n- Guarantee backward compatibility across Magento versions — Adobe commits to not breaking service contract interfaces\n\nWhy others are incorrect:\n- A: Service Contracts are not extensions — they are interface definitions. While they CAN be exposed as web APIs, their primary purpose is defining module boundaries and inter-module communication, not handling API calls\n- C: Service Contracts are a technical architecture concept (PHP interfaces), not a business agreement between developers and clients",
+    "codeExample": "// Data Interface — defines the data structure\ninterface ProductInterface\n{\n    public function getSku(): string;\n    public function setSku(string $sku): self;\n    public function getName(): ?string;\n    public function setName(string $name): self;\n    public function getPrice(): ?float;\n}\n\n// Service Interface — defines business operations\ninterface ProductRepositoryInterface\n{\n    public function save(ProductInterface $product): ProductInterface;\n    public function getById(int $productId): ProductInterface;\n    public function getList(SearchCriteriaInterface $criteria): SearchResultsInterface;\n    public function delete(ProductInterface $product): bool;\n}\n\n// Automatically exposed as API via webapi.xml:\n// GET /V1/products/:sku → getById\n// POST /V1/products    → save\n// GET /V1/products     → getList",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "service-contracts",
+      "api-design",
+      "module-architecture",
+      "separation-of-concerns"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 249,
+    "category": "Testing",
+    "difficulty": "Medium",
+    "question": "A developer creates an extension for Adobe Commerce or Magento Open Source. Which type of test will ensure the quality of the user interface after enabling this feature?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Functional Testing Framework"
+      },
+      {
+        "id": "B",
+        "text": "Web API functional testing"
+      },
+      {
+        "id": "C",
+        "text": "Integration testing"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "The Magento Functional Testing Framework (MFTF) is specifically designed to validate the storefront and admin UI by simulating real user interactions in a browser.\n\nWhy A is correct:\nMFTF runs browser-based tests that interact with the actual UI — clicking buttons, filling forms, navigating pages — ensuring the interface works correctly after enabling new features. It uses XML-based test definitions and Selenium WebDriver under the hood.\n\nWhy B is incorrect:\nWeb API functional testing validates REST/SOAP endpoints and their responses. It tests API contracts and data integrity, not the visual user interface.\n\nWhy C is incorrect:\nIntegration testing verifies that PHP classes and modules work together correctly at the code level. It tests service layers, repositories, and module interactions but does not render or interact with the browser UI.",
+    "codeExample": "<!-- MFTF Test Example: Verify UI after enabling feature -->\n<test name=\"VerifyCustomFeatureEnabledTest\">\n    <annotations>\n        <stories value=\"Custom Extension\"/>\n        <title value=\"Verify UI after enabling custom feature\"/>\n        <severity value=\"MAJOR\"/>\n    </annotations>\n    <before>\n        <actionGroup ref=\"AdminLoginActionGroup\" stepKey=\"loginAsAdmin\"/>\n    </before>\n    <amOnPage url=\"{{AdminSystemConfigPage.url}}\" stepKey=\"navigateToConfig\"/>\n    <selectOption selector=\"#custom_feature_enabled\" userInput=\"1\" stepKey=\"enableFeature\"/>\n    <click selector=\"#save\" stepKey=\"saveConfig\"/>\n    <see userInput=\"You saved the configuration.\" stepKey=\"seeSuccess\"/>\n</test>",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "testing",
+      "mftf",
+      "quality-assurance",
+      "ui-testing"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 250,
+    "category": "Database",
+    "difficulty": "Medium",
+    "question": "When reviewing and refactoring the database schema of an Adobe Commerce module, what is a best practice for optimizing queries involving large datasets?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Using dynamic code analysis"
+      },
+      {
+        "id": "B",
+        "text": "Using subqueries for each dataset"
+      },
+      {
+        "id": "C",
+        "text": "Implementing proper indexing"
+      },
+      {
+        "id": "D",
+        "text": "Avoiding the use of joins"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "Proper indexing is the fundamental best practice for optimizing database queries on large datasets. Indexes allow the database engine to locate rows without scanning entire tables.\n\nWhy C is correct:\nIndexing creates B-tree (or hash) structures that dramatically reduce query time from full table scans (O(n)) to index lookups (O(log n)). In Magento's db_schema.xml, you define indexes on columns used in WHERE, JOIN, and ORDER BY clauses. This is the single most impactful optimization for large datasets.\n\nWhy A is incorrect:\nDynamic code analysis (profiling tools like Xdebug) helps identify slow code paths at the PHP level. It is a debugging/profiling technique, not a database schema optimization practice.\n\nWhy B is incorrect:\nSubqueries often perform worse than joins on large datasets because MySQL may execute them once per row (correlated subqueries). They are generally not a recommended optimization strategy.\n\nWhy D is incorrect:\nJoins are essential for relational data retrieval in Magento's EAV and flat table architecture. Avoiding joins entirely would force multiple queries or denormalization, which introduces data consistency issues. Properly indexed joins are efficient.",
+    "codeExample": "<!-- db_schema.xml: Adding indexes for query optimization -->\n<table name=\"custom_large_dataset\">\n    <column xsi:type=\"int\" name=\"entity_id\" identity=\"true\" nullable=\"false\"/>\n    <column xsi:type=\"varchar\" name=\"sku\" length=\"64\" nullable=\"false\"/>\n    <column xsi:type=\"int\" name=\"store_id\" nullable=\"false\"/>\n    <column xsi:type=\"datetime\" name=\"created_at\" nullable=\"false\"/>\n    \n    <!-- Index on frequently filtered columns -->\n    <index referenceId=\"CUSTOM_LARGE_DATASET_SKU\" indexType=\"btree\">\n        <column name=\"sku\"/>\n    </index>\n    <index referenceId=\"CUSTOM_LARGE_DATASET_STORE_CREATED\" indexType=\"btree\">\n        <column name=\"store_id\"/>\n        <column name=\"created_at\"/>\n    </index>\n</table>",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "database",
+      "indexing",
+      "performance",
+      "schema-optimization"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 251,
+    "category": "GraphQL",
+    "difficulty": "Hard",
+    "question": "The below query loads a list of products, the SKUs of their related products, and then any secondary related product SKUs. Which interface is recommended to resolve the below GraphQL request?\n\nquery ($filter: ProductAttributeFilterInput!) {\n  products (filter: $filter) {\n    items {\n      related_products {\n        sku\n        related_products {\n          sku\n        }\n      }\n    }\n    total_count\n  }\n}",
+    "options": [
+      {
+        "id": "A",
+        "text": "\\Magento\\Framework\\GraphQl\\Query\\Resolver\\BatchResolverInterface"
+      },
+      {
+        "id": "B",
+        "text": "\\Magento\\Framework\\GraphQl\\Query\\Resolver\\IdentityInterface"
+      },
+      {
+        "id": "C",
+        "text": "\\Magento\\Framework\\GraphQl\\Query\\ResolverInterface"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "This query has nested related_products resolvers that create an N+1 problem — BatchResolverInterface is designed to solve exactly this.\n\nWhy A is correct:\nBatchResolverInterface collects all resolve requests at a given tree level and resolves them in a single batch operation. For this query, the first level of related_products may return many products, each needing their own related_products resolved. Without batching, each nested related_products would trigger a separate database query (N+1 problem). BatchResolverInterface aggregates all product IDs and fetches their related products in one query.\n\nWhy B is incorrect:\nIdentityInterface is used for cache identity tagging. It returns cache tags (e.g., product IDs) so GraphQL responses can be properly invalidated in Varnish/Fastly. It has nothing to do with query resolution strategy.\n\nWhy C is incorrect:\nResolverInterface is the standard single-item resolver. Using it here would cause each related_products node to resolve independently, resulting in the N+1 query problem — one query per product at each nesting level. For a query with two levels of nesting, this could mean hundreds of individual queries.",
+    "codeExample": "<?php\nuse Magento\\Framework\\GraphQl\\Query\\Resolver\\BatchResolverInterface;\nuse Magento\\Framework\\GraphQl\\Query\\Resolver\\BatchRequestItemInterface;\n\nclass RelatedProducts implements BatchResolverInterface\n{\n    public function resolve(\n        ContextInterface $context,\n        Field $field,\n        array $requests\n    ): BatchResponse {\n        // Collect all product IDs from all requests in one pass\n        $productIds = [];\n        foreach ($requests as $request) {\n            $productIds[] = $request->getValue()['entity_id'];\n        }\n        \n        // Single query for ALL related products\n        $relatedMap = $this->getRelatedProducts($productIds);\n        \n        // Map results back to individual requests\n        $response = new BatchResponse();\n        foreach ($requests as $request) {\n            $id = $request->getValue()['entity_id'];\n            $response->addResponse($request, $relatedMap[$id] ?? []);\n        }\n        return $response;\n    }\n}",
+    "examDomain": "Design",
+    "objectiveTags": [
+      "graphql",
+      "batch-resolver",
+      "n-plus-one",
+      "performance"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 252,
+    "category": "Testing",
+    "difficulty": "Medium",
+    "question": "An Adobe Commerce Architect wants to minimize the effort involved with regression testing. Which action should be used to perform automated end-to-end testing?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Unit Testing"
+      },
+      {
+        "id": "B",
+        "text": "Magento Functional Testing Framework"
+      },
+      {
+        "id": "C",
+        "text": "Integration Testing"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "The Magento Functional Testing Framework (MFTF) is the purpose-built solution for automated end-to-end regression testing in Adobe Commerce.\n\nWhy B is correct:\nMFTF automates browser-based end-to-end tests that simulate complete user workflows — from admin configuration through storefront checkout. It covers the full stack (UI, API, database) in a single test run. MFTF tests are written in XML, making them maintainable without PHP expertise. Adobe ships hundreds of MFTF tests with Commerce that serve as a regression suite for core functionality.\n\nWhy A is incorrect:\nUnit tests verify individual classes and methods in isolation using mocks. They cannot detect integration issues, UI regressions, or end-to-end workflow failures. A passing unit test suite does not guarantee the application works as a whole.\n\nWhy C is incorrect:\nIntegration tests verify that multiple PHP components work together correctly (e.g., a repository saves and retrieves entities). While broader than unit tests, they still operate at the code level without rendering the UI. They cannot catch JavaScript errors, layout issues, or user interaction problems.",
+    "codeExample": null,
+    "examDomain": "Review",
+    "objectiveTags": [
+      "testing",
+      "mftf",
+      "regression-testing",
+      "end-to-end"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 253,
+    "category": "Adobe Commerce Cloud",
+    "difficulty": "Medium",
+    "question": "As an Adobe Commerce architect working on a project hosted in Commerce Cloud, you are tasked with investigating the inability of a \"contributor\" User to access SSH. Given the customization of configurations by the Dev Team, what would be the first troubleshooting step for addressing the SSH access problem?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Initiate a Support Ticket to address the issue."
+      },
+      {
+        "id": "B",
+        "text": "SSH access is granted only to users with specific roles."
+      },
+      {
+        "id": "C",
+        "text": "Examine the access property in the .magento.app.yaml file."
+      },
+      {
+        "id": "D",
+        "text": "Check the User's access property in the Cloud GUI."
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "Since the Dev Team has customized configurations, the .magento.app.yaml file is the first place to check because it can restrict SSH access at the application level.\n\nWhy C is correct:\nThe .magento.app.yaml file contains an `access` property that controls SSH access permissions. The `ssh` key under `access` can be set to `contributor`, `viewer`, or `admin` to control which user roles can SSH into the environment. Since the question states the Dev Team has customized configurations, this file is the most likely cause — a misconfigured access property could block contributor-level SSH access.\n\nWhy A is incorrect:\nOpening a support ticket should be a last resort after local investigation. An architect should first check configuration files that the team controls before escalating.\n\nWhy B is incorrect:\nThis is a statement of fact, not a troubleshooting step. While true that roles affect SSH, it does not direct you to a specific action.\n\nWhy D is incorrect:\nThe Cloud GUI shows user roles and project-level access, but since the question emphasizes that configurations were customized by the Dev Team, the application-level .magento.app.yaml configuration takes precedence and should be checked first.",
+    "codeExample": "# .magento.app.yaml - SSH access configuration\nname: mymagento\n\n# Access control\naccess:\n    ssh: contributor   # Options: admin, contributor, viewer\n\n# If set to 'admin', only admin users can SSH\n# If set to 'contributor', both admin and contributor users can SSH\n# If set to 'viewer', all roles including viewer can SSH",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cloud",
+      "ssh-access",
+      "troubleshooting",
+      "magento-app-yaml"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 254,
+    "category": "Adobe Commerce Cloud",
+    "difficulty": "Medium",
+    "question": "A client has three stores, and wants to include them under a single domain in Adobe Commerce Cloud. The Adobe Commerce architect sets up the different folders for the stores that share the domain. Which file is required to configure the application structure?",
+    "options": [
+      {
+        "id": "A",
+        "text": ".magento.env.yaml"
+      },
+      {
+        "id": "B",
+        "text": "routes.yaml"
+      },
+      {
+        "id": "C",
+        "text": ".magento.app.yaml"
+      }
+    ],
+    "correctAnswers": [
+      "C"
+    ],
+    "explanation": "When multiple stores share a single domain and use different folder paths, the application structure (web locations and document roots) is configured in .magento.app.yaml.\n\nWhy C is correct:\n.magento.app.yaml defines the application's web configuration including document root, locations, and path-based routing. When stores share a domain but use subfolders (e.g., domain.com/store1/, domain.com/store2/), you configure the `web.locations` property to map each folder path to the correct store. This file controls the Nginx configuration that serves the application.\n\nWhy A is incorrect:\n.magento.env.yaml configures environment variables for build, deploy, and post-deploy phases (e.g., CRON_CONSUMERS_RUNNER, SCD_THREADS). It does not define application structure or web server paths.\n\nWhy B is incorrect:\nroutes.yaml defines domain-level routing — mapping domains and subdomains to upstream applications and configuring redirects/SSL. While it handles domain routing, the folder-based application structure for stores sharing a single domain is configured in .magento.app.yaml, not routes.yaml.",
+    "codeExample": "# .magento.app.yaml - Multi-store single domain setup\nname: mymagento\ntype: php:8.2\n\nweb:\n    locations:\n        \"/\":\n            root: \"pub\"\n            passthru: \"/index.php\"\n            index:\n                - index.php\n        \"/store_us\":\n            root: \"pub\"\n            passthru: \"/index.php\"\n            index:\n                - index.php\n        \"/store_eu\":\n            root: \"pub\"\n            passthru: \"/index.php\"\n            index:\n                - index.php",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cloud",
+      "multi-store",
+      "magento-app-yaml",
+      "application-structure"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 255,
+    "category": "Caching",
+    "difficulty": "Medium",
+    "question": "A page in Storefront is performing very slowly. While debugging, the Adobe Commerce Architect found that the following code is available in the page layout:\n\n<block class=\"Magento\\Customer\\Block\\Form\\Edit\" name=\"customer_edit\" template=\"Magento_Customer::form/edit.phtml\" cacheable=\"false\">\n    <container name=\"form.additional.info\" as=\"form_additional_info\"/>\n</block>\n\nWhat is the purpose of this code?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Making the entire page uncacheable"
+      },
+      {
+        "id": "B",
+        "text": "Making only the block - \"customer_edit\" uncacheable"
+      },
+      {
+        "id": "C",
+        "text": "Making the block and container uncacheable"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "In Magento 2's Full Page Cache (FPC), setting cacheable=\"false\" on any block makes the ENTIRE page uncacheable — not just that block.\n\nWhy A is correct:\nWhen cacheable=\"false\" is set on any block in a layout XML file, Magento marks the entire HTTP response as uncacheable. The FPC (whether built-in or Varnish) will not store this page. Every request hits the full Magento application stack, which explains the slow performance. This is a common performance pitfall — a single cacheable=\"false\" block anywhere in the page layout disables caching for the whole page.\n\nWhy B is incorrect:\nMagento's FPC operates at the page level, not the block level. There is no mechanism to cache part of a page while leaving one block uncached in the standard FPC. (ESI/hole-punching with Varnish is a separate mechanism using esi:include tags, not the cacheable attribute.)\n\nWhy C is incorrect:\nThe cacheable attribute does not selectively apply to the block and its child containers. It is an all-or-nothing page-level flag. Any block with cacheable=\"false\" poisons the entire page's cacheability.",
+    "codeExample": "<!-- BAD: Makes entire page uncacheable -->\n<block class=\"Vendor\\Module\\Block\\Dynamic\"\n       name=\"dynamic_block\"\n       cacheable=\"false\"/>\n\n<!-- GOOD: Use private content (sections) for dynamic data -->\n<!-- customer-data.js handles client-side rendering -->\n<block class=\"Vendor\\Module\\Block\\Dynamic\"\n       name=\"dynamic_block\">\n    <!-- Block renders a placeholder, JS fills dynamic content -->\n    <!-- See: Magento/Customer/view/frontend/web/js/section-config.js -->\n</block>\n\n<!-- In sections.xml -->\n<sectionGroup name=\"custom_section\">\n    <action name=\"custom/action/save\"/>\n</sectionGroup>",
+    "examDomain": "Review",
+    "objectiveTags": [
+      "caching",
+      "full-page-cache",
+      "layout-xml",
+      "performance"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 256,
+    "category": "Adobe Commerce Cloud",
+    "difficulty": "Medium",
+    "question": "A client wants to create multiple domains for their multiple stores in Adobe Commerce Cloud. Which file is required to configure the store domains?",
+    "options": [
+      {
+        "id": "A",
+        "text": "routes.yaml"
+      },
+      {
+        "id": "B",
+        "text": ".magento.app.yaml"
+      },
+      {
+        "id": "C",
+        "text": ".magento.env.yaml"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "Domain-to-application routing in Adobe Commerce Cloud is configured in routes.yaml.\n\nWhy A is correct:\nroutes.yaml defines how incoming HTTP requests are routed based on their domain name. For multiple stores with different domains, you create route entries mapping each domain (e.g., store-us.example.com, store-eu.example.com) to the upstream application. This file controls SSL termination, redirects (HTTP to HTTPS), and which application instance handles each domain.\n\nWhy B is incorrect:\n.magento.app.yaml configures the application itself — PHP version, build hooks, cron jobs, disk allocation, and web server locations. It defines how the application runs, not which domains point to it.\n\nWhy C is incorrect:\n.magento.env.yaml configures environment variables for the build and deploy pipeline (e.g., static content deployment settings, cron consumer configuration). It does not handle domain routing.",
+    "codeExample": "# routes.yaml - Multiple domains for multiple stores\n\"https://store-us.example.com/\":\n    type: upstream\n    upstream: \"mymagento:http\"\n    cache:\n        enabled: true\n\n\"https://store-eu.example.com/\":\n    type: upstream\n    upstream: \"mymagento:http\"\n    cache:\n        enabled: true\n\n\"https://store-uk.example.com/\":\n    type: upstream\n    upstream: \"mymagento:http\"\n    cache:\n        enabled: true\n\n# HTTP to HTTPS redirects\n\"http://{all}/\":\n    type: redirect\n    to: \"https://{all}/\"",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cloud",
+      "routes-yaml",
+      "multi-store",
+      "domain-configuration"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 257,
+    "category": "Deployment & Cloud",
+    "difficulty": "Medium",
+    "question": "During a deployment, you receive an error: \"Item CRON_CONSUMERS_RUNNER is not supposed to be in stage build. Please move it to one of possible stages: global, deploy\". Which file should you use to fix this issue?",
+    "options": [
+      {
+        "id": "A",
+        "text": ".magento.app.yaml"
+      },
+      {
+        "id": "B",
+        "text": "routes.yaml"
+      },
+      {
+        "id": "C",
+        "text": "services.yaml"
+      },
+      {
+        "id": "D",
+        "text": ".magento.env.yaml"
+      }
+    ],
+    "correctAnswers": [
+      "D"
+    ],
+    "explanation": "The CRON_CONSUMERS_RUNNER variable and its stage configuration are managed in the .magento.env.yaml file.\n\nWhy D is correct:\n.magento.env.yaml controls environment variables organized by deployment stage (build, deploy, post-deploy, global). The error states CRON_CONSUMERS_RUNNER is incorrectly placed in the build stage — it must be moved to the deploy or global stage. This file is the only place where stage-specific environment variable configuration is defined for the Adobe Commerce Cloud deployment pipeline.\n\nWhy A is incorrect:\n.magento.app.yaml defines application properties (type, disk, hooks, cron schedules, web config). While it can define cron job schedules, it does not control the CRON_CONSUMERS_RUNNER environment variable or deployment stage assignments.\n\nWhy B is incorrect:\nroutes.yaml handles HTTP routing configuration (domains, SSL, cache). It has no relation to deployment variables or cron configuration.\n\nWhy C is incorrect:\nservices.yaml defines infrastructure services (MySQL version, Redis, Elasticsearch/OpenSearch, RabbitMQ). It provisions backing services, not application deployment variables.",
+    "codeExample": "# .magento.env.yaml\n\n# WRONG - causes the error:\nstage:\n  build:\n    CRON_CONSUMERS_RUNNER:\n      cron_run: true\n      max_messages: 1000\n\n# CORRECT - move to deploy stage:\nstage:\n  deploy:\n    CRON_CONSUMERS_RUNNER:\n      cron_run: true\n      max_messages: 1000\n      consumers:\n        - async.operations.all",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cloud",
+      "deployment",
+      "magento-env-yaml",
+      "cron-consumers"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 258,
+    "category": "Catalog & Price Architecture",
+    "difficulty": "Medium",
+    "question": "A merchant is using specific Product Recommendations for multiple store views on the project: Default, StoreView1, and StoreView2. They now want to add an existing recommendation unit from the StoreView2 to a Category list page using a CMS block. When they use the Product Recommendation placeholder from the Page Builder functionality, they only see recommendations from the Default scope. What can be done to aid this problem?",
+    "options": [
+      {
+        "id": "A",
+        "text": "Use Product Relationships over Product Recommendations"
+      },
+      {
+        "id": "B",
+        "text": "Use a recommendation unit for the Category page type over the Page Builder"
+      },
+      {
+        "id": "C",
+        "text": "Use recommendation units for the Page Builder page type only in the default store view"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "Product Recommendations in Page Builder are scoped to the Default store view. To display recommendations on a Category page for a specific store view, you must use a recommendation unit assigned to the Category page type instead.\n\nWhy B is correct:\nRecommendation units created for the Category page type are store-view aware and will display correctly on category list pages across all store views. This bypasses the Page Builder limitation where the Product Recommendation content type only surfaces units from the Default scope.\n\nWhy others are incorrect:\n- A: Product Relationships (related, cross-sell, up-sell) are manually curated product links, not AI-driven recommendation units. They serve a different purpose and lack the dynamic recommendation engine capabilities.\n- C: This workaround limits functionality to only the Default store view, which contradicts the requirement to show StoreView2 recommendations on the category page.",
+    "codeExample": null,
+    "examDomain": "Design",
+    "objectiveTags": [
+      "product-recommendations",
+      "multi-store",
+      "page-builder"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 259,
+    "category": "Deployment & Cloud",
+    "difficulty": "Hard",
+    "question": "Several deployment errors are occurring in the Adobe Commerce Cloud server. For this reason, it is not possible to push any new changes in the repository. The Adobe Commerce Architect found out that certain incompatible files/folders were committed inside the repository, which is what caused this issue. What are the three files/folders that should not be in the repository? (Choose three.)",
+    "options": [
+      {
+        "id": "A",
+        "text": "app/etc/registration_globlist.php"
+      },
+      {
+        "id": "B",
+        "text": "app/etc/env.php"
+      },
+      {
+        "id": "C",
+        "text": "vendor"
+      },
+      {
+        "id": "D",
+        "text": "pub/static"
+      },
+      {
+        "id": "E",
+        "text": "bin"
+      },
+      {
+        "id": "F",
+        "text": "pub/media/catalog"
+      }
+    ],
+    "correctAnswers": [
+      "C",
+      "B",
+      "F"
+    ],
+    "explanation": "Adobe Commerce Cloud has specific files and folders that must not be committed to the repository because they are generated during the build/deploy pipeline or contain environment-specific secrets.\n\nWhy B, C, and D are correct:\n- B (app/etc/env.php): Contains environment-specific configuration including database credentials, encryption keys, and cache backend settings. Committing this causes deployment conflicts because Cloud auto-generates it per environment.\n- C (vendor): The vendor directory is installed via Composer during the build phase. Committing it bloats the repository, causes merge conflicts, and conflicts with the Cloud build process that runs `composer install`.\n- D (pub/static): Static content is generated during the build or deploy phase via SCD (Static Content Deployment). Committed static files conflict with the generated output and cause deployment errors.\n\nWhy others are incorrect:\n- A (app/etc/registration_globlist.php): This is a legitimate framework file that helps with module autoloading and should be in the repository.\n- E (bin): The bin directory contains the Magento CLI tool (bin/magento) and is required in the repository for build and deploy hooks.\n- F (pub/media/catalog): While media files are typically stored on shared mounts, this path alone is not a standard .gitignore entry that causes deployment errors. The pub/media directory is configured as a shared mount, but committing catalog media does not break deployments the way env.php, vendor, or pub/static do.",
+    "codeExample": "# .gitignore entries for Adobe Commerce Cloud\n\n# Environment-specific config (auto-generated per environment)\napp/etc/env.php\n\n# Composer-managed dependencies (installed during build)\n/vendor/\n\n# Generated static content (SCD runs during build/deploy)\n/pub/static/*\n!/pub/static/.htaccess\n\n# Other generated content\n/generated/\n/var/",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "cloud-architecture",
+      "deployment-pipeline",
+      "repository-management"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 260,
+    "category": "Deployment & Cloud",
+    "difficulty": "Medium",
+    "question": "A developer is configuring a production environment for Adobe Commerce Cloud. What is the optimal strategy for static content deployment (SCD) in this case?",
+    "options": [
+      {
+        "id": "A",
+        "text": "SCD on deploy with skip HTML minification"
+      },
+      {
+        "id": "B",
+        "text": "SCD on build"
+      },
+      {
+        "id": "C",
+        "text": "SCD on deploy"
+      }
+    ],
+    "correctAnswers": [
+      "B"
+    ],
+    "explanation": "For production environments on Adobe Commerce Cloud, running SCD during the build phase is the optimal strategy for minimizing downtime.\n\nWhy B is correct:\nRunning SCD during the build phase means static content is generated before the site enters maintenance mode in the deploy phase. This is critical for production because:\n- The build phase runs in an isolated container with no impact on the live site\n- Generated static files are transferred to the deploy phase and symlinked instantly\n- The deploy phase duration is minimized, reducing or eliminating downtime\n- This is the recommended approach for zero-downtime deployments\n\nWhy others are incorrect:\n- A (SCD on deploy with skip HTML minification): Running SCD during deploy puts the site into maintenance mode while static content is generated. Skipping HTML minification speeds it up slightly but still causes unnecessary downtime on production.\n- C (SCD on deploy): The worst option for production. Full SCD during deploy means maximum maintenance mode duration. This is only acceptable for development/integration environments where downtime is not a concern.",
+    "codeExample": "# .magento.env.yaml - Production SCD on build\nstage:\n  global:\n    SCD_ON_DEMAND: false\n  build:\n    SKIP_SCD: false\n    SCD_STRATEGY: compact\n    SCD_THREADS: 4\n  deploy:\n    SKIP_SCD: true    # Skip SCD on deploy since it ran on build\n\n# Prerequisite: locales must be in config.php\n# Run before committing:\n# bin/magento app:config:dump scopes themes i18n",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "deployment-strategy",
+      "static-content-deployment",
+      "cloud-architecture"
+    ],
+    "examFeedback": true
+  },
+  {
+    "id": 261,
+    "category": "Deployment & Cloud",
+    "difficulty": "Medium",
+    "question": "A developer is configuring an integration environment for Adobe Commerce Cloud. What is the optimal strategy for static content deployment (SCD) in this case?",
+    "options": [
+      {
+        "id": "A",
+        "text": "SCD on demand"
+      },
+      {
+        "id": "B",
+        "text": "SCD on build"
+      },
+      {
+        "id": "C",
+        "text": "SCD on deploy with skip HTML minification"
+      }
+    ],
+    "correctAnswers": [
+      "A"
+    ],
+    "explanation": "For integration environments on Adobe Commerce Cloud, SCD on demand is the optimal strategy because it prioritizes fast deployment cycles over frontend performance.\n\nWhy A is correct:\nSCD on demand generates static content only when a page is first requested by a user. This is ideal for integration environments because:\n- Deployments are extremely fast since no time is spent generating static content\n- Developers push code frequently and need rapid feedback cycles\n- Integration environments are used for testing, not serving real customer traffic\n- Static content is generated lazily only for pages actually visited during testing\n- Saves build resources and time that would be wasted generating content for all locales/themes\n\nWhy others are incorrect:\n- B (SCD on build): Unnecessarily slow for integration. Building static content for all locales and themes wastes time when developers only need to test specific pages. This strategy is optimal for production where downtime must be minimized.\n- C (SCD on deploy with skip HTML minification): Still adds significant deployment time. Even with skipped minification, generating all static content during deploy is wasteful for an environment where rapid iteration matters more than frontend performance.",
+    "codeExample": "# .magento.env.yaml - Integration SCD on demand\nstage:\n  global:\n    SCD_ON_DEMAND: true   # Generate static content on first request\n    SKIP_HTML_MINIFICATION: true  # Skip minification for speed\n  build:\n    SKIP_SCD: true        # No SCD during build\n  deploy:\n    SKIP_SCD: true        # No SCD during deploy",
+    "examDomain": "ConfigureDeploy",
+    "objectiveTags": [
+      "deployment-strategy",
+      "static-content-deployment",
+      "environment-configuration"
+    ],
+    "examFeedback": true
   }
 ]
