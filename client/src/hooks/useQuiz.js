@@ -65,7 +65,7 @@ export default function useQuiz(questions, sessionId) {
   }, [currentQuestion])
 
   const finishSession = useCallback((timeSpentSeconds) => {
-    api.post(`/api/sessions/${sessionId}/finish`, { correctCount: score, timeSpentSeconds }).catch(() => {})
+    return api.post(`/api/sessions/${sessionId}/finish`, { correctCount: score, timeSpentSeconds })
   }, [sessionId, score])
 
   const restartQuiz = useCallback(() => {

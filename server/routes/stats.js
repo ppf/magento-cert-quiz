@@ -69,4 +69,16 @@ router.get('/', (req, res) => {
   })
 })
 
+router.get('/wrong-questions', (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days) || 2, 1), 365)
+  const rows = db.prepare(`
+    SELECT DISTINCT a.question_id
+    FROM answers a
+    JOIN sessions s ON a.session_id = s.id
+    WHERE a.is_correct = 0
+      AND s.started_at >= datetime('now', '-' || ? || ' days')
+  `).all(days)
+  res.json({ questionIds: rows.map(r => r.question_id) })
+})
+
 module.exports = router
