@@ -175,7 +175,7 @@ function CategorySelect({ allQuestions, onStart }) {
               <span>{questionCount} question{questionCount !== 1 ? 's' : ''} selected</span>
             </div>
             <button
-              onClick={() => onStart({ category: selectedCategory, examDomain: selectedDomain })}
+              onClick={() => onStart({ category: selectedCategory, examDomain: selectedDomain, examFeedbackOnly })}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
               style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}
             >
@@ -208,21 +208,23 @@ export default function QuizPage() {
   const quiz = useQuiz(questions || [], sessionId)
 
   async function handleStart(filters) {
-    const { category, examDomain } = filters
+    const { category, examDomain, examFeedbackOnly } = filters
 
     const filtered = allQuestions.filter((q) => {
       const categoryMatch = category === 'All' || q.category === category
       const domainMatch = examDomain === 'All' || q.examDomain === examDomain
-      return categoryMatch && domainMatch
+      const sourceMatch = !examFeedbackOnly || q.examFeedback
+      return categoryMatch && domainMatch && sourceMatch
     })
 
     const shuffled = shuffle(filtered)
     setQuestions(shuffled)
 
-    let categoryFilter = 'All'
-    if (examDomain !== 'All' && category !== 'All') categoryFilter = `${examDomain} / ${category}`
-    else if (examDomain !== 'All') categoryFilter = `Domain: ${examDomain}`
-    else if (category !== 'All') categoryFilter = category
+    const prefix = examFeedbackOnly ? 'Exam Feedback: ' : ''
+    let categoryFilter = examFeedbackOnly ? 'Exam Feedback' : 'All'
+    if (examDomain !== 'All' && category !== 'All') categoryFilter = `${prefix}${examDomain} / ${category}`
+    else if (examDomain !== 'All') categoryFilter = `${prefix}Domain: ${examDomain}`
+    else if (category !== 'All') categoryFilter = `${prefix}${category}`
 
     const { id } = await api.post('/api/sessions', { categoryFilter, totalQuestions: shuffled.length })
     setSessionId(id)
