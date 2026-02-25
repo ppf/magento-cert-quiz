@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Check, BookOpen, Target, Shuffle, Play, Clock, Trophy } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Check, BookOpen, Target, Shuffle, Play, Clock, Trophy, RotateCcw } from 'lucide-react'
 import api from '../api'
 import useQuiz from '../hooks/useQuiz'
 import useTimer from '../hooks/useTimer'
@@ -22,15 +22,17 @@ function shuffle(arr) {
   return a
 }
 
-function CategorySelect({ allQuestions, onStart }) {
+function CategorySelect({ allQuestions, wrongQuestionIds, initialWrongMode, onStart }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedDomain, setSelectedDomain] = useState('All')
   const [examFeedbackOnly, setExamFeedbackOnly] = useState(false)
+  const [wrongOnly, setWrongOnly] = useState(initialWrongMode && wrongQuestionIds.size > 0)
 
   const baseQuestions = useMemo(() => {
+    if (wrongOnly) return allQuestions.filter(q => wrongQuestionIds.has(q.id))
     if (examFeedbackOnly) return allQuestions.filter(q => q.examFeedback)
     return allQuestions
-  }, [allQuestions, examFeedbackOnly])
+  }, [allQuestions, examFeedbackOnly, wrongOnly, wrongQuestionIds])
 
   const examFeedbackCount = useMemo(() => allQuestions.filter(q => q.examFeedback).length, [allQuestions])
 
@@ -81,9 +83,9 @@ function CategorySelect({ allQuestions, onStart }) {
           <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Source</label>
           <div className="flex flex-wrap gap-2 mb-6">
             <button
-              onClick={() => { setExamFeedbackOnly(false); setSelectedDomain('All'); setSelectedCategory('All') }}
+              onClick={() => { setExamFeedbackOnly(false); setWrongOnly(false); setSelectedDomain('All'); setSelectedCategory('All') }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
-                !examFeedbackOnly
+                !examFeedbackOnly && !wrongOnly
                   ? 'bg-accent/20 border-accent/50 text-accent-light'
                   : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
               }`}
@@ -92,7 +94,7 @@ function CategorySelect({ allQuestions, onStart }) {
               <span className="ml-1.5 text-xs opacity-60">{allQuestions.length}</span>
             </button>
             <button
-              onClick={() => { setExamFeedbackOnly(true); setSelectedDomain('All'); setSelectedCategory('All') }}
+              onClick={() => { setExamFeedbackOnly(true); setWrongOnly(false); setSelectedDomain('All'); setSelectedCategory('All') }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
                 examFeedbackOnly
                   ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
@@ -102,6 +104,22 @@ function CategorySelect({ allQuestions, onStart }) {
               Exam Feedback
               <span className="ml-1.5 text-xs opacity-60">{examFeedbackCount}</span>
             </button>
+            {wrongQuestionIds.size > 0 && (
+              <button
+                onClick={() => { setWrongOnly(true); setExamFeedbackOnly(false); setSelectedDomain('All'); setSelectedCategory('All') }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                  wrongOnly
+                    ? 'bg-red-500/20 border-red-500/50 text-red-300'
+                    : 'bg-surface-700/40 border-slate-600/30 text-slate-300 hover:border-slate-500/50'
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <RotateCcw size={13} />
+                  Wrong Answers
+                </span>
+                <span className="ml-1.5 text-xs opacity-60">{wrongQuestionIds.size}</span>
+              </button>
+            )}
           </div>
 
           <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Exam Domain</label>
@@ -175,7 +193,7 @@ function CategorySelect({ allQuestions, onStart }) {
               <span>{questionCount} question{questionCount !== 1 ? 's' : ''} selected</span>
             </div>
             <button
-              onClick={() => onStart({ category: selectedCategory, examDomain: selectedDomain, examFeedbackOnly })}
+              onClick={() => onStart({ category: selectedCategory, examDomain: selectedDomain, examFeedbackOnly, wrongOnly })}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
               style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}
             >
@@ -191,37 +209,42 @@ function CategorySelect({ allQuestions, onStart }) {
 
 export default function QuizPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [allQuestions, setAllQuestions] = useState(null)
+  const [wrongQuestionIds, setWrongQuestionIds] = useState(new Set())
   const [questions, setQuestions] = useState(null)
   const [sessionId, setSessionId] = useState(null)
   const [loading, setLoading] = useState(true)
   const timer = useTimer()
 
   useEffect(() => {
-    api.get('/api/questions')
-      .then(data => {
-        setAllQuestions(data)
-        setLoading(false)
-      })
+    Promise.all([
+      api.get('/api/questions'),
+      api.get('/api/stats/wrong-questions?days=2').catch(() => ({ questionIds: [] })),
+    ]).then(([questionsData, wrongData]) => {
+      setAllQuestions(questionsData)
+      setWrongQuestionIds(new Set(wrongData.questionIds))
+      setLoading(false)
+    })
   }, [])
 
   const quiz = useQuiz(questions || [], sessionId)
 
   async function handleStart(filters) {
-    const { category, examDomain, examFeedbackOnly } = filters
+    const { category, examDomain, examFeedbackOnly, wrongOnly } = filters
 
     const filtered = allQuestions.filter((q) => {
       const categoryMatch = category === 'All' || q.category === category
       const domainMatch = examDomain === 'All' || q.examDomain === examDomain
-      const sourceMatch = !examFeedbackOnly || q.examFeedback
+      const sourceMatch = wrongOnly ? wrongQuestionIds.has(q.id) : (!examFeedbackOnly || q.examFeedback)
       return categoryMatch && domainMatch && sourceMatch
     })
 
     const shuffled = shuffle(filtered)
     setQuestions(shuffled)
 
-    const prefix = examFeedbackOnly ? 'Exam Feedback: ' : ''
-    let categoryFilter = examFeedbackOnly ? 'Exam Feedback' : 'All'
+    const prefix = wrongOnly ? 'Wrong Answers: ' : examFeedbackOnly ? 'Exam Feedback: ' : ''
+    let categoryFilter = wrongOnly ? 'Wrong Answers' : examFeedbackOnly ? 'Exam Feedback' : 'All'
     if (examDomain !== 'All' && category !== 'All') categoryFilter = `${prefix}${examDomain} / ${category}`
     else if (examDomain !== 'All') categoryFilter = `${prefix}Domain: ${examDomain}`
     else if (category !== 'All') categoryFilter = `${prefix}${category}`
@@ -234,7 +257,8 @@ export default function QuizPage() {
   useEffect(() => {
     if (quiz.quizCompleted && sessionId) {
       quiz.finishSession(timer.elapsedSeconds)
-      navigate(`/results/${sessionId}`)
+        .catch(() => {})
+        .then(() => navigate(`/results/${sessionId}`))
     }
   }, [quiz.quizCompleted])
 
@@ -247,7 +271,7 @@ export default function QuizPage() {
   }
 
   if (!questions) {
-    return <CategorySelect allQuestions={allQuestions} onStart={handleStart} />
+    return <CategorySelect allQuestions={allQuestions} wrongQuestionIds={wrongQuestionIds} initialWrongMode={searchParams.get('mode') === 'wrong'} onStart={handleStart} />
   }
 
   if (!quiz.question) return null

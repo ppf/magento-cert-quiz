@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Trophy, Clock, Target, TrendingUp,
-  ChevronRight, BarChart3, Play,
+  ChevronRight, BarChart3, Play, RotateCcw,
 } from 'lucide-react'
 import api from '../api'
 
@@ -131,14 +131,23 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
           <p className="text-slate-400 text-sm mt-1">Track your exam preparation progress</p>
         </div>
-        <button
-          onClick={() => navigate('/quiz')}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-surface-900 transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-          style={{ background: 'linear-gradient(135deg, #f97316, #fbbf24)' }}
-        >
-          <Play size={16} />
-          Start Quiz
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/quiz?mode=wrong')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border border-red-500/30 bg-red-500/10 text-red-400 transition-all duration-200 hover:bg-red-500/20 active:scale-[0.97]"
+          >
+            <RotateCcw size={16} />
+            Retry Wrong
+          </button>
+          <button
+            onClick={() => navigate('/quiz')}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-surface-900 transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+            style={{ background: 'linear-gradient(135deg, #f97316, #fbbf24)' }}
+          >
+            <Play size={16} />
+            Start Quiz
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}
